@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Who Played This?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=DM+Sans:wght@400;500;600;700&family=Heebo:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080818;
+      --surface: rgba(255,255,255,0.06);
+      --surface-hover: rgba(255,255,255,0.10);
+      --border: rgba(255,255,255,0.08);
+      --text: #f0f0f5;
+      --text-dim: #8888aa;
+      --accent: #ff6b35;
+      --accent-glow: rgba(255,107,53,0.3);
+      --blue: #00d4ff;
+      --blue-glow: rgba(0,212,255,0.25);
+      --green: #00e676;
+      --green-glow: rgba(0,230,118,0.25);
+      --red: #ff4757;
+      --yellow: #ffd32a;
+      --radius: 16px;
+      --font-display: 'Bungee', cursive;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    body {
+      background: 
+        radial-gradient(ellipse at 20% 0%, rgba(255,107,53,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 100%, rgba(0,212,255,0.06) 0%, transparent 60%),
+        var(--bg);
+      min-height: 100dvh;
+    }
+
+    /* ─── Layout ─────────────────────────────── */
+    .screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 20px;
+      min-height: 100dvh;
+      animation: fadeIn 0.4s ease;
+    }
+    .screen.active { display: flex; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 20px var(--accent-glow); }
+      50% { box-shadow: 0 0 40px var(--accent-glow), 0 0 60px var(--accent-glow); }
+    }
+
+    @keyframes confettiBurst {
+      0% { transform: scale(0) rotate(0deg); opacity: 1; }
+      100% { transform: scale(1.5) rotate(720deg); opacity: 0; }
+    }
+
+    @keyframes revealFlip {
+      0% { transform: perspective(600px) rotateY(90deg); opacity: 0; }
+      100% { transform: perspective(600px) rotateY(0deg); opacity: 1; }
+    }
+
+    @keyframes bounceIn {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.05); }
+      70% { transform: scale(0.95); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    /* ─── Typography ─────────────────────────── */
+    .title-huge {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 8vw, 3.5rem);
+      line-height: 1.1;
+      text-align: center;
+      background: linear-gradient(135deg, var(--accent), var(--yellow));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .title-medium {
+      font-family: var(--font-display);
+      font-size: clamp(1.2rem, 5vw, 1.8rem);
+      text-align: center;
+      color: var(--text);
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ─── Components ─────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      width: 100%;
+      max-width: 420px;
+      backdrop-filter: blur(12px);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border: none;
+      border-radius: 12px;
+      font-family: var(--font-body);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      width: 100%;
+      max-width: 420px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #ff8f5e);
+      color: #fff;
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+    .btn-primary:hover:not(:disabled) { box-shadow: 0 6px 30px var(--accent-glow); }
+
+    .btn-blue {
+      background: linear-gradient(135deg, var(--blue), #5ee0ff);
+      color: #080818;
+      box-shadow: 0 4px 20px var(--blue-glow);
+    }
+
+    .btn-green {
+      background: linear-gradient(135deg, var(--green), #69f0ae);
+      color: #080818;
+      box-shadow: 0 4px 20px var(--green-glow);
+    }
+
+    .btn-ghost {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-hover); }
+
+    .input {
+      width: 100%;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input:focus { border-color: var(--accent); }
+    .input::placeholder { color: var(--text-dim); }
+
+    .room-code {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 12vw, 4rem);
+      letter-spacing: 8px;
+      text-align: center;
+      color: var(--blue);
+      text-shadow: 0 0 30px var(--blue-glow);
+    }
+
+    .player-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin: 16px 0;
+    }
+
+    .player-chip {
+      padding: 8px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      animation: slideUp 0.3s ease;
+    }
+    .player-chip.host { border-color: var(--accent); color: var(--accent); }
+    .player-chip.me { border-color: var(--blue); color: var(--blue); }
+
+    .prompt-box {
+      background: linear-gradient(135deg, rgba(255,107,53,0.12), rgba(255,211,42,0.08));
+      border: 1px solid rgba(255,107,53,0.25);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      text-align: center;
+      font-size: 1.15rem;
+      font-weight: 600;
+      line-height: 1.5;
+      width: 100%;
+      max-width: 420px;
+      animation: slideUp 0.4s ease;
+    }
+
+    .song-display {
+      text-align: center;
+      padding: 32px 24px;
+      background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(0,230,118,0.05));
+      border: 1px solid rgba(0,212,255,0.2);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 420px;
+      animation: slideUp 0.4s ease;
+    }
+    .song-display .song-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.3rem, 5vw, 1.8rem);
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .song-display .song-artist {
+      font-size: 1.1rem;
+      color: var(--blue);
+      font-weight: 500;
+    }
+
+    .vote-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .vote-option {
+      padding: 14px 18px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: start;
+      color: var(--text);
+      font-family: var(--font-body);
+    }
+    .vote-option:hover { background: var(--surface-hover); border-color: rgba(255,255,255,0.15); }
+    .vote-option.selected { border-color: var(--accent); background: rgba(255,107,53,0.1); }
+    .vote-option:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .confidence-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      max-width: 420px;
+    }
+    .conf-btn {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .conf-btn.selected { border-color: var(--yellow); background: rgba(255,211,42,0.12); color: var(--yellow); }
+
+    .reveal-name {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 7vw, 2.8rem);
+      text-align: center;
+      color: var(--accent);
+      text-shadow: 0 0 40px var(--accent-glow);
+      animation: bounceIn 0.6s ease;
+      margin: 16px 0;
+    }
+
+    .score-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 420px;
+      animation: slideUp 0.3s ease backwards;
+    }
+    .score-row.first { border-color: var(--yellow); background: rgba(255,211,42,0.08); }
+    .score-rank { font-family: var(--font-display); font-size: 1.3rem; width: 40px; }
+    .score-name { flex: 1; font-weight: 600; font-size: 1.05rem; }
+    .score-points { font-family: var(--font-display); font-size: 1.2rem; color: var(--accent); }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-correct { background: rgba(0,230,118,0.15); color: var(--green); }
+    .badge-wrong { background: rgba(255,71,87,0.15); color: var(--red); }
+    .badge-stealth { background: rgba(0,212,255,0.15); color: var(--blue); }
+
+    .progress-bar {
+      width: 100%;
+      max-width: 420px;
+      height: 4px;
+      background: var(--surface);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-bar .fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--yellow));
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
+    .status-text {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    .spacer { height: 16px; }
+    .spacer-sm { height: 10px; }
+    .spacer-lg { height: 24px; }
+
+    .reveal-votes-list {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .reveal-vote-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--surface);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      animation: revealFlip 0.4s ease backwards;
+    }
+
+    .yt-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: rgba(255,0,0,0.12);
+      border: 1px solid rgba(255,0,0,0.25);
+      border-radius: 10px;
+      color: #ff4444;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+    .yt-link:hover { background: rgba(255,0,0,0.2); }
+    .yt-link svg { width: 20px; height: 20px; fill: #ff4444; }
+
+    .waiting-pulse {
+      animation: float 2s ease-in-out infinite;
+    }
+
+    .label { font-size: 0.8rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+    .icon-music::before { content: "🎵"; margin-inline-end: 6px; }
+    .icon-think::before { content: "🤔"; margin-inline-end: 6px; }
+    .icon-fire::before { content: "🔥"; margin-inline-end: 6px; }
+    .icon-trophy::before { content: "🏆"; margin-inline-end: 6px; }
+    .icon-check::before { content: "✅"; margin-inline-end: 6px; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 500;
+      z-index: 999;
+      transition: transform 0.3s ease;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .flex-center { display: flex; align-items: center; justify-content: center; }
+    .w-full { width: 100%; max-width: 420px; }
+    .text-center { text-align: center; }
+
+    /* ─── Scoreboard animation ───────────────── */
+    .results-crown {
+      font-size: 3rem;
+      animation: bounceIn 0.5s ease;
+      text-align: center;
+    }
+
+    .disconnect-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(8,8,24,0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 1000;
+      padding: 24px;
+    }
+    .disconnect-overlay.active { display: flex; }
+
+    /* ─── RTL / Hebrew ──────────────────────────── */
+    [dir="rtl"] { --font-display: 'Heebo', sans-serif; --font-body: 'Heebo', sans-serif; }
+    [dir="rtl"] .title-huge { font-weight: 900; }
+    [dir="rtl"] .title-medium { font-weight: 700; }
+    [dir="rtl"] .reveal-name { font-weight: 900; }
+    #home-code, .room-code { direction: ltr; }
+
+    .lang-toggle {
+      position: fixed;
+      top: 16px;
+      inset-inline-end: 16px;
+      z-index: 100;
+      padding: 8px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(8px);
+    }
+    .lang-toggle:hover { background: var(--surface-hover); color: var(--text); }
+  </style>
+</head>
+<body>
+
+<button class="lang-toggle" id="lang-toggle" onclick="toggleLang()"></button>
+
+<!-- ═══ HOME SCREEN ═══ -->
+<div id="screen-home" class="screen active">
+  <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+    <div style="font-size:3.5rem; margin-bottom:8px;">🎧</div>
+    <h1 class="title-huge" id="home-title">WHO<br>PLAYED<br>THIS?</h1>
+    <div class="spacer-sm"></div>
+    <p class="subtitle" id="home-subtitle">Submit songs. Guess who picked what.<br>Prove you know your people.</p>
+    <div class="spacer"></div>
+    <div id="home-instructions" class="card" style="text-align:start; font-size:0.9rem; line-height:1.7;"></div>
+  </div>
+
+  <div style="width:100%; max-width:420px; display:flex; flex-direction:column; gap:12px; padding-bottom:32px;">
+    <input type="text" id="home-name" class="input" placeholder="Your name" maxlength="20" autocomplete="off">
+    <button class="btn btn-primary" id="home-create-btn" onclick="createRoom()">Create Game</button>
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="home-code" class="input" placeholder="Room code" maxlength="4" style="text-transform:uppercase; letter-spacing:4px; text-align:center; font-weight:700;" autocomplete="off">
+      <button class="btn btn-ghost" id="home-join-btn" onclick="joinRoom()" style="width:auto; min-width:100px;">Join</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LOBBY SCREEN ═══ -->
+<div id="screen-lobby" class="screen">
+  <div class="spacer-lg"></div>
+  <p class="label" id="lobby-code-label">Room Code</p>
+  <div class="spacer-sm"></div>
+  <div class="room-code" id="lobby-code"></div>
+  <div class="spacer-sm"></div>
+  <p class="subtitle" id="lobby-share-text">Share this code with your players</p>
+  <div class="spacer-lg"></div>
+
+  <p class="label" id="lobby-players-label">Players</p>
+  <div class="player-list" id="lobby-players"></div>
+
+  <div style="flex:1;"></div>
+  <div id="lobby-host-controls" style="width:100%; max-width:420px; padding-bottom:32px;">
+    <button class="btn btn-primary" id="lobby-start-btn" onclick="startRound()">
+      <span class="icon-fire"></span><span id="lobby-start-text">Start Round</span>
+    </button>
+    <div class="spacer-sm"></div>
+    <p class="status-text" id="lobby-status"></p>
+  </div>
+  <div id="lobby-player-wait" style="display:none; padding-bottom:32px;">
+    <p class="subtitle waiting-pulse" id="lobby-wait-text">Waiting for host to start the round...</p>
+  </div>
+</div>
+
+<!-- ═══ SUBMITTING SCREEN ═══ -->
+<div id="screen-submitting" class="screen">
+  <div class="spacer-lg"></div>
+  <p class="label" id="sub-round-label"></p>
+  <div class="spacer-sm"></div>
+  <div class="prompt-box" id="sub-prompt"></div>
+  <div class="spacer-lg"></div>
+
+  <div id="sub-form" style="width:100%; max-width:420px; display:flex; flex-direction:column; gap:12px;">
+    <input type="text" id="sub-title" class="input" placeholder="Song title" autocomplete="off" oninput="updateYtPreview()">
+    <input type="text" id="sub-artist" class="input" placeholder="Artist (optional)" autocomplete="off" oninput="updateYtPreview()">
+    <p id="sub-yt-preview" class="status-text" style="display:none;"></p>
+    <button class="btn btn-primary" onclick="submitSong()">
+      <span class="icon-music"></span><span id="sub-submit-text">Submit Song</span>
+    </button>
+  </div>
+
+  <div id="sub-done" style="display:none; text-align:center;">
+    <div style="font-size:2.5rem; margin-bottom:8px;">✅</div>
+    <p style="font-weight:600; font-size:1.1rem;" id="sub-done-text">Song submitted!</p>
+    <p class="subtitle" id="sub-done-wait">Waiting for other players...</p>
+  </div>
+
+  <div class="spacer-lg"></div>
+  <div class="progress-bar"><div class="fill" id="sub-progress"></div></div>
+  <div class="spacer-sm"></div>
+  <p class="status-text" id="sub-status"></p>
+
+  <div style="flex:1;"></div>
+  <div id="sub-host-advance" style="display:none; width:100%; max-width:420px; padding-bottom:32px;">
+    <button class="btn btn-green" id="sub-advance-btn" onclick="startGuessing()">
+      Everyone's In - Let's Go!
+    </button>
+  </div>
+</div>
+
+<!-- ═══ GUESSING SCREEN ═══ -->
+<div id="screen-guessing" class="screen">
+  <div class="spacer"></div>
+  <div style="display:flex; justify-content:space-between; align-items:center; width:100%; max-width:420px;">
+    <p class="label" id="guess-song-label"></p>
+    <p class="label" id="guess-round-label"></p>
+  </div>
+  <div class="spacer-sm"></div>
+  <div class="progress-bar"><div class="fill" id="guess-progress"></div></div>
+  <div class="spacer"></div>
+
+  <div class="song-display" id="guess-song-display">
+    <div class="song-title" id="guess-song-title"></div>
+    <div class="spacer-sm"></div>
+    <div class="song-artist" id="guess-song-artist"></div>
+    <div class="spacer"></div>
+    <a class="yt-link" id="guess-yt-link" href="#" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24"><path d="M23.5 6.2c-.3-1-1-1.8-2-2.1C19.6 3.5 12 3.5 12 3.5s-7.6 0-9.5.5c-1 .3-1.7 1.1-2 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8c.3 1 1 1.8 2 2.1 1.9.5 9.5.5 9.5.5s7.6 0 9.5-.5c1-.3 1.7-1.1 2-2.1.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg>
+      Play on YouTube
+    </a>
+  </div>
+
+  <div class="spacer"></div>
+
+  <!-- Own song message -->
+  <div id="guess-own-song" style="display:none; text-align:center; padding:20px;">
+    <div style="font-size:2rem; margin-bottom:8px;">🤫</div>
+    <p style="font-weight:600;" id="guess-own-title">This is YOUR song!</p>
+    <p class="subtitle" id="guess-own-subtitle">Sit back and watch them guess...</p>
+  </div>
+
+  <!-- Voting UI -->
+  <div id="guess-vote-ui" style="width:100%; max-width:420px;">
+    <p class="label" id="guess-who-label" style="margin-bottom:8px;"><span class="icon-think"></span>Who submitted this?</p>
+    <div class="vote-grid" id="guess-vote-grid"></div>
+    <div class="spacer"></div>
+    <p class="label" id="guess-conf-label" style="margin-bottom:8px;">Confidence (risk/reward)</p>
+    <div class="confidence-row" id="guess-conf-row">
+      <button class="conf-btn selected" onclick="setConfidence(1)" data-conf="1">1x Safe</button>
+      <button class="conf-btn" onclick="setConfidence(2)" data-conf="2">2x Bold</button>
+      <button class="conf-btn" onclick="setConfidence(3)" data-conf="3">3x YOLO</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn btn-primary" id="guess-submit-btn" onclick="submitVote()" disabled>
+      <span id="guess-lock-text">Lock In My Guess</span>
+    </button>
+  </div>
+
+  <!-- Already voted -->
+  <div id="guess-voted" style="display:none; text-align:center;">
+    <div style="font-size:2rem; margin-bottom:8px;">🔒</div>
+    <p style="font-weight:600;" id="guess-voted-text">Vote locked in!</p>
+    <p class="subtitle" id="guess-vote-status"></p>
+  </div>
+
+  <div style="flex:1;"></div>
+  <div id="guess-host-reveal" style="display:none; width:100%; max-width:420px; padding-bottom:32px;">
+    <p class="status-text" id="guess-reveal-status" style="margin-bottom:10px;"></p>
+    <button class="btn btn-primary" onclick="revealSong()" style="animation:glow 2s ease-in-out infinite;">
+      <span id="guess-reveal-text">Reveal Who Played This!</span>
+    </button>
+  </div>
+</div>
+
+<!-- ═══ REVEAL SCREEN ═══ -->
+<div id="screen-reveal" class="screen">
+  <div class="spacer-lg"></div>
+  <div class="song-display">
+    <div class="song-title" id="reveal-song-title"></div>
+    <div class="spacer-sm"></div>
+    <div class="song-artist" id="reveal-song-artist"></div>
+  </div>
+  <div class="spacer"></div>
+
+  <p class="label" id="reveal-by-label">Submitted by</p>
+  <div class="reveal-name" id="reveal-name"></div>
+  <div id="reveal-stealth" style="display:none; text-align:center;">
+    <span class="badge badge-stealth" id="reveal-stealth-text">+2 Stealth Bonus - Nobody guessed it!</span>
+  </div>
+
+  <div class="spacer"></div>
+  <p class="label" id="reveal-guesses-label" style="margin-bottom:8px;">Guesses</p>
+  <div class="reveal-votes-list" id="reveal-votes"></div>
+
+  <div style="flex:1;"></div>
+  <div id="reveal-host-next" style="display:none; width:100%; max-width:420px; padding-bottom:32px;">
+    <button class="btn btn-blue" onclick="nextSong()" id="reveal-next-btn">Next Song</button>
+  </div>
+  <div id="reveal-player-wait" style="display:none; padding-bottom:32px;">
+    <p class="subtitle waiting-pulse" id="reveal-wait-text">Waiting for next song...</p>
+  </div>
+</div>
+
+<!-- ═══ RESULTS SCREEN ═══ -->
+<div id="screen-results" class="screen">
+  <div class="spacer-lg"></div>
+  <div class="results-crown">👑</div>
+  <div class="spacer-sm"></div>
+  <h2 class="title-medium" id="results-winner"></h2>
+  <div class="spacer-sm"></div>
+  <p class="subtitle" id="results-subtitle">Final Scoreboard</p>
+  <div class="spacer-lg"></div>
+
+  <div id="results-list" style="width:100%; max-width:420px; display:flex; flex-direction:column; gap:8px;"></div>
+
+  <div style="flex:1;"></div>
+  <div id="results-host-controls" style="display:none; width:100%; max-width:420px; padding-bottom:32px; display:flex; flex-direction:column; gap:10px;">
+    <button class="btn btn-primary" onclick="startRound()">
+      <span class="icon-fire"></span><span id="results-next-text">Next Round</span>
+    </button>
+    <button class="btn btn-ghost" id="results-lobby-btn" onclick="backToLobby()">Back to Lobby</button>
+  </div>
+  <div id="results-player-wait" style="display:none; padding-bottom:32px;">
+    <p class="subtitle waiting-pulse" id="results-wait-text">Waiting for host...</p>
+  </div>
+</div>
+
+<!-- ═══ Disconnection Overlay ═══ -->
+<div class="disconnect-overlay" id="disconnect-overlay">
+  <div style="font-size:2.5rem;">😵</div>
+  <h2 class="title-medium" id="disconnect-title">Disconnected</h2>
+  <p class="subtitle" id="disconnect-msg">Lost connection to the game.</p>
+  <button class="btn btn-primary" id="disconnect-btn" onclick="sessionStorage.clear();location.reload()" style="max-width:300px;">Back to Home</button>
+</div>
+
+<!-- ═══ Toast ═══ -->
+<div class="toast" id="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // ─── Translations ───────────────────────────
+  const translations = {
+    en: {
+      pageTitle: 'Who Played This?',
+      homeTitle: 'WHO<br>PLAYED<br>THIS?',
+      homeSubtitle: 'Submit songs. Guess who picked what.<br>Prove you know your people.',
+      homeInstructions: '<strong>🎧 How to play?</strong><br><br>Each player gets a topic and secretly picks a song<br>Songs play one by one<br>Guess who picked each song<br>Nobody guessed your song? +2 bonus points<br><br><strong>🏆 Whoever knows their friends best — wins!</strong>',
+      namePlaceholder: 'Your name',
+      createGame: 'Create Game',
+      roomCodePlaceholder: 'Room code',
+      join: 'Join',
+      roomCodeLabel: 'Room Code',
+      shareCode: 'Share this code with your players',
+      playersLabel: 'Players',
+      startRound: 'Start Round',
+      waitingForHost: 'Waiting for host to start the round...',
+      needMorePlayers: 'Need at least 2 players to start',
+      playersReady: '{count} players ready',
+      hostBadge: ' (host)',
+      youBadge: ' (you)',
+      roundLabel: 'Round',
+      songTitlePlaceholder: 'Song title',
+      artistPlaceholder: 'Artist (optional)',
+      submitSong: 'Submit Song',
+      songSubmitted: 'Song submitted!',
+      waitingForOthers: 'Waiting for other players...',
+      songsSubmitted: '{count} / {total} songs submitted',
+      everyonesIn: "Everyone's In - Let's Go!",
+      songLabel: 'Song',
+      ofLabel: 'of',
+      playOnYoutube: 'Play on YouTube',
+      ytPreview: 'YouTube search: {query}',
+      yourSong: 'This is YOUR song!',
+      sitBack: 'Sit back and watch them guess...',
+      whoSubmitted: 'Who submitted this?',
+      confidenceLabel: 'Confidence (risk/reward)',
+      confSafe: '1x Safe',
+      confBold: '2x Bold',
+      confYolo: '3x YOLO',
+      lockInGuess: 'Lock In My Guess',
+      voteLocked: 'Vote locked in!',
+      votesIn: '{count} / {total} votes in',
+      revealWho: 'Reveal Who Played This!',
+      unknownArtist: 'Unknown artist',
+      submittedByLabel: 'Submitted by',
+      stealthBonus: '+2 Stealth Bonus - Nobody guessed it!',
+      guessesLabel: 'Guesses',
+      guessed: 'guessed',
+      submitterLabel: '(submitter)',
+      noVotes: 'No votes this round',
+      nextSong: 'Next Song',
+      finalScoresBtn: 'Final Scores',
+      waitingNextSong: 'Waiting for next song...',
+      wins: '{name} wins!',
+      finalScoreboard: 'Final Scoreboard',
+      pts: 'pts',
+      nextRound: 'Next Round',
+      backToLobby: 'Back to Lobby',
+      waitingForHostGeneric: 'Waiting for host...',
+      disconnected: 'Disconnected',
+      lostConnection: 'Lost connection to the game.',
+      hostEndedGame: 'The host ended the game.',
+      lostConnectionRejoin: 'Lost connection. Please rejoin.',
+      backToHome: 'Back to Home',
+      enterName: 'Enter your name first!',
+      enterRoomCode: 'Enter a 4-letter room code',
+      enterSongTitle: 'Enter a song title!',
+      selectPlayer: 'Select a player first!',
+      err_invalidName: 'Invalid name',
+      err_invalidNameLength: 'Invalid name (1-20 characters)',
+      err_roomNotFound: 'Room not found. Check the code and try again.',
+      err_gameInProgress: 'Game already in progress. Wait for the next round.',
+      err_nameTaken: 'That name is taken. Pick another one!',
+      err_roomFull: 'Room is full (max 10 players).',
+      err_songRequired: 'Song title is required',
+      prompts: [
+        "A song you secretly love but would NEVER admit in public",
+        "The song that plays when you enter a room feeling powerful",
+        "A song that perfectly describes your love life right now",
+        "Your ultimate shower anthem",
+        "A song you'd play at a funeral for your worst enemy",
+        "The song that makes you ugly cry every single time",
+        "Your go-to karaoke song after two drinks",
+        "A song you've listened to 100+ times and never got tired of",
+        "A song that instantly takes you back to a specific memory",
+        "A song you think nobody else in this room knows",
+        "The most romantic song you know",
+        "A song that makes you want to dance alone in your room",
+        "Your favorite song from before you were born",
+        "A song you'd choose as your life's movie soundtrack",
+        "The song you want played at your wedding",
+        "A song that always makes you smile no matter what",
+        "The song that defined your teenage years",
+        "A song you'd blast at maximum volume on a road trip",
+        "A song that makes you feel like the main character",
+        "The most underrated song you know"
+      ]
+    },
+    he: {
+      pageTitle: 'מי בחר את השיר?',
+      homeTitle: 'מי<br>בחר<br>את השיר?',
+      homeSubtitle: 'שלחו שירים. נחשו מי בחר מה.<br>תוכיחו שאתם מכירים אחד את השני.',
+      homeInstructions: '<strong>🎧 איך משחקים?</strong><br><br>כל שחקן מקבל נושא ובוחר שיר בסתר<br>השירים מתנגנים אחד אחד<br>מנחשים מי בחר כל שיר<br>אף אחד לא ניחש את השיר שלכם? בונוס +2 נקודות<br><br><strong>🏆 מי שמכיר את החברים הכי טוב - מנצח!</strong>',
+      namePlaceholder: 'השם שלך',
+      createGame: 'צור משחק',
+      roomCodePlaceholder: 'קוד חדר',
+      join: 'הצטרף',
+      roomCodeLabel: 'קוד חדר',
+      shareCode: 'שתפו את הקוד עם השחקנים',
+      playersLabel: 'שחקנים',
+      startRound: 'התחל סיבוב',
+      waitingForHost: 'ממתינים למארח להתחיל את הסיבוב...',
+      needMorePlayers: 'צריך לפחות 2 שחקנים כדי להתחיל',
+      playersReady: '{count} שחקנים מוכנים',
+      hostBadge: ' (מארח)',
+      youBadge: ' (את/ה)',
+      roundLabel: 'סיבוב',
+      songTitlePlaceholder: 'שם השיר',
+      artistPlaceholder: 'אמן (אופציונלי)',
+      submitSong: 'שלח שיר',
+      songSubmitted: 'השיר נשלח!',
+      waitingForOthers: 'ממתינים לשחקנים אחרים...',
+      songsSubmitted: '{count} / {total} שירים נשלחו',
+      everyonesIn: 'כולם בפנים - יאללה!',
+      songLabel: 'שיר',
+      ofLabel: 'מתוך',
+      playOnYoutube: 'נגן ביוטיוב',
+      ytPreview: 'חיפוש ביוטיוב: {query}',
+      yourSong: 'זה השיר שלך!',
+      sitBack: 'שבו בצד ותנו להם לנחש...',
+      whoSubmitted: 'מי שלח את השיר הזה?',
+      confidenceLabel: 'ביטחון (סיכון/סיכוי)',
+      confSafe: '1x בטוח',
+      confBold: '2x אמיץ',
+      confYolo: '3x יאללה',
+      lockInGuess: 'נעל את הניחוש',
+      voteLocked: 'הניחוש ננעל!',
+      votesIn: '{count} / {total} הצבעות',
+      revealWho: 'חשפו מי בחר את השיר!',
+      unknownArtist: 'אמן לא ידוע',
+      submittedByLabel: 'נשלח על ידי',
+      stealthBonus: '+2 בונוס התגנבות - אף אחד לא ניחש!',
+      guessesLabel: 'ניחושים',
+      guessed: 'ניחש',
+      submitterLabel: '(השולח)',
+      noVotes: 'אין הצבעות בסיבוב הזה',
+      nextSong: 'השיר הבא',
+      finalScoresBtn: 'תוצאות סופיות',
+      waitingNextSong: 'ממתינים לשיר הבא...',
+      wins: '{name} ניצח!',
+      finalScoreboard: 'טבלת ניקוד סופית',
+      pts: 'נק׳',
+      nextRound: 'סיבוב הבא',
+      backToLobby: 'חזרה ללובי',
+      waitingForHostGeneric: 'ממתינים למארח...',
+      disconnected: 'התנתקת',
+      lostConnection: 'החיבור למשחק אבד.',
+      hostEndedGame: 'המארח סיים את המשחק.',
+      lostConnectionRejoin: 'החיבור אבד. אנא הצטרפו מחדש.',
+      backToHome: 'חזרה לדף הבית',
+      enterName: 'הכניסו שם קודם!',
+      enterRoomCode: 'הכניסו קוד חדר בן 4 תווים',
+      enterSongTitle: 'הכניסו שם שיר!',
+      selectPlayer: 'בחרו שחקן קודם!',
+      err_invalidName: 'שם לא תקין',
+      err_invalidNameLength: 'שם לא תקין (1-20 תווים)',
+      err_roomNotFound: 'חדר לא נמצא. בדקו את הקוד ונסו שוב.',
+      err_gameInProgress: 'המשחק כבר התחיל. חכו לסיבוב הבא.',
+      err_nameTaken: 'השם תפוס. בחרו שם אחר!',
+      err_roomFull: 'החדר מלא (מקסימום 10 שחקנים).',
+      err_songRequired: 'שם השיר הוא שדה חובה',
+      prompts: [
+        "שיר שאתם אוהבים בסתר אבל לעולם לא הייתם מודים בפומבי",
+        "השיר שמתנגן כשאתם נכנסים לחדר ומרגישים בעלי כוח",
+        "שיר שמתאר בדיוק את חיי האהבה שלכם עכשיו",
+        "המנון המקלחת האולטימטיבי שלכם",
+        "שיר שהייתם מנגנים בהלוויה של האויב הכי גדול שלכם",
+        "השיר שגורם לכם לבכות בכי מכוער כל פעם",
+        "שיר הקריוקי שלכם אחרי שתי כוסות",
+        "שיר ששמעתם יותר מ-100 פעמים ואף פעם לא נמאס",
+        "שיר שמחזיר אתכם מיד לזיכרון ספציפי",
+        "שיר שאתם חושבים שאף אחד בחדר לא מכיר",
+        "השיר הכי רומנטי שאתם מכירים",
+        "שיר שגורם לכם לרקוד לבד בחדר",
+        "השיר האהוב עליכם מלפני שנולדתם",
+        "שיר שהייתם בוחרים כפסקול לסרט החיים שלכם",
+        "השיר שאתם רוצים שינגנו בחתונה שלכם",
+        "שיר שתמיד גורם לכם לחייך לא משנה מה",
+        "השיר שהגדיר את שנות העשרה שלכם",
+        "שיר שהייתם מנגנים בווליום מקסימלי בטיול רכב",
+        "שיר שגורם לכם להרגיש כמו הדמות הראשית",
+        "השיר הכי לא מוערך שאתם מכירים"
+      ]
+    }
+  };
+
+  let currentLang = localStorage.getItem('lang') || 'he';
+
+  function t(key, params) {
+    const val = translations[currentLang][key] || translations['en'][key] || key;
+    if (!params) return val;
+    return val.replace(/\{(\w+)\}/g, (_, k) => params[k] !== undefined ? params[k] : `{${k}}`);
+  }
+
+  function applyStaticTranslations() {
+    const doc = document.documentElement;
+    doc.lang = currentLang === 'he' ? 'he' : 'en';
+    doc.dir = currentLang === 'he' ? 'rtl' : 'ltr';
+    document.title = t('pageTitle');
+
+    // Language toggle
+    document.getElementById('lang-toggle').textContent = currentLang === 'he' ? 'EN' : 'עב';
+
+    // Home
+    document.getElementById('home-title').innerHTML = t('homeTitle');
+    document.getElementById('home-subtitle').innerHTML = t('homeSubtitle');
+    document.getElementById('home-instructions').innerHTML = t('homeInstructions');
+    document.getElementById('home-name').placeholder = t('namePlaceholder');
+    document.getElementById('home-code').placeholder = t('roomCodePlaceholder');
+    document.getElementById('home-create-btn').textContent = t('createGame');
+    document.getElementById('home-join-btn').textContent = t('join');
+
+    // Lobby
+    document.getElementById('lobby-code-label').textContent = t('roomCodeLabel');
+    document.getElementById('lobby-share-text').textContent = t('shareCode');
+    document.getElementById('lobby-players-label').textContent = t('playersLabel');
+    document.getElementById('lobby-start-text').textContent = t('startRound');
+    document.getElementById('lobby-wait-text').textContent = t('waitingForHost');
+
+    // Submitting
+    document.getElementById('sub-title').placeholder = t('songTitlePlaceholder');
+    document.getElementById('sub-artist').placeholder = t('artistPlaceholder');
+    document.getElementById('sub-submit-text').textContent = t('submitSong');
+    document.getElementById('sub-done-text').textContent = t('songSubmitted');
+    document.getElementById('sub-done-wait').textContent = t('waitingForOthers');
+    document.getElementById('sub-advance-btn').textContent = t('everyonesIn');
+
+    // Guessing
+    document.getElementById('guess-who-label').innerHTML =
+      '<span class="icon-think"></span>' + t('whoSubmitted');
+    document.getElementById('guess-conf-label').textContent = t('confidenceLabel');
+    document.querySelector('[data-conf="1"]').textContent = t('confSafe');
+    document.querySelector('[data-conf="2"]').textContent = t('confBold');
+    document.querySelector('[data-conf="3"]').textContent = t('confYolo');
+    document.getElementById('guess-lock-text').textContent = t('lockInGuess');
+    document.getElementById('guess-voted-text').textContent = t('voteLocked');
+    document.getElementById('guess-own-title').textContent = t('yourSong');
+    document.getElementById('guess-own-subtitle').textContent = t('sitBack');
+    document.getElementById('guess-reveal-text').textContent = t('revealWho');
+
+    // Guessing: yt link
+    const ytLink = document.getElementById('guess-yt-link');
+    const ytSvg = ytLink.querySelector('svg').outerHTML;
+    ytLink.innerHTML = ytSvg + '\n      ' + t('playOnYoutube');
+
+    // Reveal
+    document.getElementById('reveal-by-label').textContent = t('submittedByLabel');
+    document.getElementById('reveal-stealth-text').textContent = t('stealthBonus');
+    document.getElementById('reveal-guesses-label').textContent = t('guessesLabel');
+    document.getElementById('reveal-wait-text').textContent = t('waitingNextSong');
+
+    // Results
+    document.getElementById('results-subtitle').textContent = t('finalScoreboard');
+    document.getElementById('results-next-text').textContent = t('nextRound');
+    document.getElementById('results-lobby-btn').textContent = t('backToLobby');
+    document.getElementById('results-wait-text').textContent = t('waitingForHostGeneric');
+
+    // Disconnect
+    document.getElementById('disconnect-title').textContent = t('disconnected');
+    document.getElementById('disconnect-msg').textContent = t('lostConnection');
+    document.getElementById('disconnect-btn').textContent = t('backToHome');
+  }
+
+  window.toggleLang = function() {
+    currentLang = currentLang === 'he' ? 'en' : 'he';
+    localStorage.setItem('lang', currentLang);
+    applyStaticTranslations();
+    if (gameState) render();
+  };
+
+  // ─── State ──────────────────────────────────
+  let socket = null;
+  let gameState = null;
+  let selectedVote = null;
+  let selectedConf = 1;
+  let lastRoundNumber = 0;
+
+  // ─── Socket Setup ───────────────────────────
+  function connectSocket() {
+    socket = io({ reconnection: true, reconnectionAttempts: 30, reconnectionDelay: 1000 });
+
+    socket.on('game-state', (state) => {
+      document.getElementById('disconnect-overlay').classList.remove('active');
+      gameState = state;
+      sessionStorage.setItem('roomCode', state.roomCode);
+      sessionStorage.setItem('playerName', state.myName);
+      render();
+    });
+
+    socket.on('room-closed', () => {
+      sessionStorage.removeItem('roomCode');
+      sessionStorage.removeItem('playerName');
+      document.getElementById('disconnect-msg').textContent = t('hostEndedGame');
+      document.getElementById('disconnect-overlay').classList.add('active');
+    });
+
+    socket.on('disconnect', () => {
+      // Don't show overlay immediately — Socket.IO will try to reconnect
+    });
+
+    socket.io.on('reconnect', () => {
+      const code = sessionStorage.getItem('roomCode');
+      const name = sessionStorage.getItem('playerName');
+      if (code && name) {
+        socket.emit('rejoin', { code, name }, (res) => {
+          if (res.error) {
+            sessionStorage.removeItem('roomCode');
+            sessionStorage.removeItem('playerName');
+            document.getElementById('disconnect-msg').textContent = t('lostConnectionRejoin');
+            document.getElementById('disconnect-overlay').classList.add('active');
+          }
+        });
+      }
+    });
+
+    socket.io.on('reconnect_failed', () => {
+      document.getElementById('disconnect-msg').textContent = t('lostConnectionRejoin');
+      document.getElementById('disconnect-overlay').classList.add('active');
+    });
+  }
+
+  // ─── Actions ────────────────────────────────
+  window.createRoom = function() {
+    const name = document.getElementById('home-name').value.trim();
+    if (!name) return showToast(t('enterName'));
+    if (!socket) connectSocket();
+    socket.emit('create-room', name, (res) => {
+      if (res.error) return showToast(t(res.error));
+    });
+  };
+
+  window.joinRoom = function() {
+    const name = document.getElementById('home-name').value.trim();
+    const code = document.getElementById('home-code').value.trim().toUpperCase();
+    if (!name) return showToast(t('enterName'));
+    if (!code || code.length !== 4) return showToast(t('enterRoomCode'));
+    if (!socket) connectSocket();
+    socket.emit('join-room', { name, code }, (res) => {
+      if (res.error) return showToast(t(res.error));
+    });
+  };
+
+  window.startRound = function() {
+    socket.emit('start-round');
+  };
+
+  window.submitSong = function() {
+    const title = document.getElementById('sub-title').value.trim();
+    const artist = document.getElementById('sub-artist').value.trim();
+    if (!title) return showToast(t('enterSongTitle'));
+    socket.emit('submit-song', { title, artist }, (res) => {
+      if (res?.error) return showToast(t(res.error));
+    });
+  };
+
+  window.updateYtPreview = function() {
+    const title = document.getElementById('sub-title').value.trim();
+    const artist = document.getElementById('sub-artist').value.trim();
+    const preview = document.getElementById('sub-yt-preview');
+    if (title) {
+      const query = artist ? `${artist} ${title}` : title;
+      preview.textContent = t('ytPreview', { query: query });
+      preview.style.display = 'block';
+    } else {
+      preview.style.display = 'none';
+    }
+  };
+
+  window.startGuessing = function() {
+    socket.emit('start-guessing');
+  };
+
+  window.selectVote = function(name) {
+    selectedVote = name;
+    document.querySelectorAll('.vote-option').forEach(el => {
+      el.classList.toggle('selected', el.dataset.name === name);
+    });
+    document.getElementById('guess-submit-btn').disabled = false;
+  };
+
+  window.setConfidence = function(level) {
+    selectedConf = level;
+    document.querySelectorAll('.conf-btn').forEach(el => {
+      el.classList.toggle('selected', parseInt(el.dataset.conf) === level);
+    });
+  };
+
+  window.submitVote = function() {
+    if (!selectedVote) return showToast(t('selectPlayer'));
+    socket.emit('submit-vote', { guess: selectedVote, confidence: selectedConf }, (res) => {
+      if (res?.error) return showToast(t(res.error));
+    });
+  };
+
+  window.revealSong = function() {
+    socket.emit('reveal');
+  };
+
+  window.nextSong = function() {
+    selectedVote = null;
+    selectedConf = 1;
+    socket.emit('next-song');
+  };
+
+  window.backToLobby = function() {
+    socket.emit('back-to-lobby');
+  };
+
+  // ─── Render ─────────────────────────────────
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + id).classList.add('active');
+  }
+
+  function render() {
+    if (!gameState) return;
+    const s = gameState;
+
+    switch(s.phase) {
+      case 'lobby': renderLobby(s); break;
+      case 'submitting': renderSubmitting(s); break;
+      case 'guessing': renderGuessing(s); break;
+      case 'reveal': renderReveal(s); break;
+      case 'results': renderResults(s); break;
+    }
+  }
+
+  function renderLobby(s) {
+    showScreen('lobby');
+    document.getElementById('lobby-code').textContent = s.roomCode;
+
+    const list = document.getElementById('lobby-players');
+    list.innerHTML = s.players.map(name => {
+      const cls = name === s.hostName ? 'host' : (name === s.myName ? 'me' : '');
+      const label = name === s.hostName ? t('hostBadge') : (name === s.myName ? t('youBadge') : '');
+      return `<div class="player-chip ${cls}">${name}${label}</div>`;
+    }).join('');
+
+    if (s.isHost) {
+      document.getElementById('lobby-host-controls').style.display = 'block';
+      document.getElementById('lobby-player-wait').style.display = 'none';
+      const btn = document.getElementById('lobby-start-btn');
+      btn.disabled = s.players.length < 2;
+      document.getElementById('lobby-status').textContent =
+        s.players.length < 2 ? t('needMorePlayers') : t('playersReady', { count: s.players.length });
+    } else {
+      document.getElementById('lobby-host-controls').style.display = 'none';
+      document.getElementById('lobby-player-wait').style.display = 'block';
+    }
+  }
+
+  function renderSubmitting(s) {
+    showScreen('submitting');
+    if (s.roundNumber !== lastRoundNumber) {
+      lastRoundNumber = s.roundNumber;
+      document.getElementById('sub-title').value = '';
+      document.getElementById('sub-artist').value = '';
+    }
+    document.getElementById('sub-round-label').textContent = t('roundLabel') + ' ' + s.roundNumber;
+    document.getElementById('sub-prompt').textContent = translations[currentLang].prompts[s.prompt];
+
+    const pct = s.totalPlayers > 0 ? (s.submittedCount / s.totalPlayers * 100) : 0;
+    document.getElementById('sub-progress').style.width = pct + '%';
+    document.getElementById('sub-status').textContent = t('songsSubmitted', { count: s.submittedCount, total: s.totalPlayers });
+
+    if (s.hasSubmitted) {
+      document.getElementById('sub-form').style.display = 'none';
+      document.getElementById('sub-done').style.display = 'block';
+    } else {
+      document.getElementById('sub-form').style.display = 'flex';
+      document.getElementById('sub-done').style.display = 'none';
+    }
+
+    const advanceEl = document.getElementById('sub-host-advance');
+    if (s.isHost && s.submittedCount >= 2) {
+      advanceEl.style.display = 'block';
+    } else {
+      advanceEl.style.display = 'none';
+    }
+  }
+
+  function renderGuessing(s) {
+    showScreen('guessing');
+    document.getElementById('guess-song-label').textContent =
+      t('songLabel') + ' ' + (s.currentIndex + 1) + ' ' + t('ofLabel') + ' ' + s.totalSongs;
+    document.getElementById('guess-round-label').textContent = t('roundLabel') + ' ' + s.roundNumber;
+    document.getElementById('guess-progress').style.width =
+      ((s.currentIndex + 1) / s.totalSongs * 100) + '%';
+
+    if (s.currentSong) {
+      if (s.isHost) {
+        document.getElementById('guess-song-display').style.display = 'block';
+        document.getElementById('guess-song-title').textContent = s.currentSong.title;
+        document.getElementById('guess-song-artist').textContent = s.currentSong.artist || t('unknownArtist');
+        document.getElementById('guess-yt-link').style.display = 'inline-flex';
+        document.getElementById('guess-yt-link').href =
+          `https://www.youtube.com/results?search_query=${s.currentSong.youtubeQuery}`;
+      } else {
+        document.getElementById('guess-song-display').style.display = 'none';
+      }
+    }
+
+    const isOwnSong = s.currentSong?.isMySubmission;
+
+    if (isOwnSong) {
+      document.getElementById('guess-own-song').style.display = 'block';
+      document.getElementById('guess-vote-ui').style.display = 'none';
+      document.getElementById('guess-voted').style.display = 'none';
+    } else if (s.hasVoted) {
+      document.getElementById('guess-own-song').style.display = 'none';
+      document.getElementById('guess-vote-ui').style.display = 'none';
+      document.getElementById('guess-voted').style.display = 'block';
+      document.getElementById('guess-vote-status').textContent =
+        t('votesIn', { count: s.votedCount, total: s.eligibleVoters });
+    } else {
+      document.getElementById('guess-own-song').style.display = 'none';
+      document.getElementById('guess-vote-ui').style.display = 'block';
+      document.getElementById('guess-voted').style.display = 'none';
+
+      const grid = document.getElementById('guess-vote-grid');
+      const otherPlayers = s.players.filter(n => n !== s.myName);
+      grid.innerHTML = otherPlayers.map(name =>
+        `<button class="vote-option ${selectedVote === name ? 'selected' : ''}" data-name="${name}" onclick="selectVote('${name.replace(/'/g, "\\'")}')">${name}</button>`
+      ).join('');
+
+      // Reset confidence buttons to match current state
+      document.querySelectorAll('.conf-btn').forEach(el => {
+        el.classList.toggle('selected', parseInt(el.dataset.conf) === selectedConf);
+      });
+
+      document.getElementById('guess-submit-btn').disabled = !selectedVote;
+    }
+
+    if (s.isHost) {
+      document.getElementById('guess-host-reveal').style.display = 'block';
+      document.getElementById('guess-reveal-status').textContent =
+        t('votesIn', { count: s.votedCount, total: s.eligibleVoters });
+    } else {
+      document.getElementById('guess-host-reveal').style.display = 'none';
+    }
+  }
+
+  function renderReveal(s) {
+    showScreen('reveal');
+    if (s.currentSong) {
+      document.getElementById('reveal-song-title').textContent = s.currentSong.title;
+      document.getElementById('reveal-song-artist').textContent = s.currentSong.artist || t('unknownArtist');
+      document.getElementById('reveal-name').textContent = s.currentSong.submittedBy;
+    }
+
+    document.getElementById('reveal-stealth').style.display = s.nobodyGuessed ? 'block' : 'none';
+
+    // Show votes
+    const votesEl = document.getElementById('reveal-votes');
+    if (s.revealVotes && s.currentSong) {
+      const submitter = s.currentSong.submittedBy;
+      let html = '';
+      Object.entries(s.revealVotes).forEach(([voter, vote], i) => {
+        const correct = vote.guess === submitter;
+        const confLabel = vote.confidence > 1 ? ` (${vote.confidence}x)` : '';
+        const points = correct ? `+${vote.confidence}` : (vote.confidence > 1 ? `-${vote.confidence - 1}` : '0');
+        html += `<div class="reveal-vote-row" style="animation-delay:${i * 0.1}s">
+          <span>${voter} ${t('guessed')} <strong>${vote.guess}</strong>${confLabel}</span>
+          <span class="badge ${correct ? 'badge-correct' : 'badge-wrong'}">${points}</span>
+        </div>`;
+      });
+
+      // Show who didn't vote (it was their song)
+      const submitterInPlayers = s.players.includes(submitter);
+      if (submitterInPlayers) {
+        const stealthPts = s.nobodyGuessed ? '+2' : '0';
+        html += `<div class="reveal-vote-row" style="animation-delay:${Object.keys(s.revealVotes).length * 0.1}s">
+          <span>${submitter} <em style="color:var(--text-dim);">${t('submitterLabel')}</em></span>
+          <span class="badge badge-stealth">${stealthPts}</span>
+        </div>`;
+      }
+
+      votesEl.innerHTML = html;
+    } else {
+      votesEl.innerHTML = `<p class="subtitle">${t('noVotes')}</p>`;
+    }
+
+    if (s.isHost) {
+      document.getElementById('reveal-host-next').style.display = 'block';
+      document.getElementById('reveal-player-wait').style.display = 'none';
+      const isLast = s.currentIndex >= s.totalSongs - 1;
+      document.getElementById('reveal-next-btn').textContent = isLast ? ('🏆 ' + t('finalScoresBtn')) : t('nextSong');
+    } else {
+      document.getElementById('reveal-host-next').style.display = 'none';
+      document.getElementById('reveal-player-wait').style.display = 'block';
+    }
+  }
+
+  function renderResults(s) {
+    showScreen('results');
+    const sorted = Object.entries(s.scores).sort((a, b) => b[1] - a[1]);
+
+    if (sorted.length > 0) {
+      document.getElementById('results-winner').textContent = t('wins', { name: sorted[0][0] });
+    }
+
+    const medals = ['🥇', '🥈', '🥉'];
+    document.getElementById('results-list').innerHTML = sorted.map(([name, pts], i) => {
+      const medal = medals[i] || `${i + 1}.`;
+      const isFirst = i === 0;
+      const isMe = name === s.myName;
+      return `<div class="score-row ${isFirst ? 'first' : ''}" style="animation-delay:${i * 0.12}s; ${isMe ? 'border-color:var(--blue);' : ''}">
+        <span class="score-rank">${medal}</span>
+        <span class="score-name">${name}${isMe ? t('youBadge') : ''}</span>
+        <span class="score-points">${pts} ${t('pts')}</span>
+      </div>`;
+    }).join('');
+
+    if (s.isHost) {
+      document.getElementById('results-host-controls').style.display = 'flex';
+      document.getElementById('results-player-wait').style.display = 'none';
+    } else {
+      document.getElementById('results-host-controls').style.display = 'none';
+      document.getElementById('results-player-wait').style.display = 'block';
+    }
+  }
+
+  // ─── Toast ──────────────────────────────────
+  let toastTimeout;
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  // ─── Enter key handling ─────────────────────
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const active = document.activeElement;
+      if (active.id === 'home-name' || active.id === 'home-code') {
+        const code = document.getElementById('home-code').value.trim();
+        if (code) joinRoom(); else createRoom();
+      } else if (active.id === 'sub-title' || active.id === 'sub-artist') {
+        submitSong();
+      }
+    }
+  });
+
+  // ─── Init ───────────────────────────────────
+  applyStaticTranslations();
+
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "who-played-this",
+  "version": "1.0.0",
+  "description": "A multiplayer music guessing game - guess who submitted each song!",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.4"
+  }
+}
