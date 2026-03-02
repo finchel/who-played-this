@@ -576,6 +576,12 @@
     <p class="subtitle" id="sub-done-wait">Waiting for other players...</p>
   </div>
 
+  <div id="sub-spectator" style="display:none; text-align:center; padding:20px;">
+    <div style="font-size:2rem; margin-bottom:8px;">👀</div>
+    <p style="font-weight:600;" id="sub-spectator-title">You joined mid-round</p>
+    <p class="subtitle" id="sub-spectator-msg">You'll play in the next round!</p>
+  </div>
+
   <div class="spacer-lg"></div>
   <div class="progress-bar"><div class="fill" id="sub-progress"></div></div>
   <div class="spacer-sm"></div>
@@ -642,6 +648,12 @@
     <div style="font-size:2rem; margin-bottom:8px;">🔒</div>
     <p style="font-weight:600;" id="guess-voted-text">Vote locked in!</p>
     <p class="subtitle" id="guess-vote-status"></p>
+  </div>
+
+  <!-- Spectator -->
+  <div id="guess-spectator" style="display:none; text-align:center; padding:20px;">
+    <div style="font-size:2rem; margin-bottom:8px;">👀</div>
+    <p style="font-weight:600;" id="guess-spectator-title">Watching this round</p>
   </div>
 
   <div style="flex:1;"></div>
@@ -800,6 +812,11 @@
       err_nameTaken: 'That name is taken. Pick another one!',
       err_roomFull: 'Room is full (max 10 players).',
       err_songRequired: 'Song title is required',
+      err_playerNotInRoom: 'You were removed. Use "Join" to rejoin.',
+      joinedMidRound: 'You joined mid-round',
+      playNextRound: "You'll play in the next round!",
+      watchingThisRound: 'Watching this round',
+      hostChanged: '{name} is now the host',
       prompts: [
         "A song you secretly love but would NEVER admit in public",
         "The song that plays when you enter a room feeling powerful",
@@ -899,6 +916,11 @@
       err_nameTaken: 'השם תפוס. בחרו שם אחר!',
       err_roomFull: 'החדר מלא (מקסימום 10 שחקנים).',
       err_songRequired: 'שם השיר הוא שדה חובה',
+      err_playerNotInRoom: 'הוסרת מהחדר. השתמשו ב"הצטרף" כדי לחזור.',
+      joinedMidRound: 'הצטרפת באמצע הסיבוב',
+      playNextRound: 'תשחקו בסיבוב הבא!',
+      watchingThisRound: 'צופים בסיבוב הזה',
+      hostChanged: '{name} הוא עכשיו המארח',
       prompts: [
         "שיר שאתם אוהבים בסתר אבל לעולם לא הייתם מודים בפומבי",
         "השיר שמתנגן כשאתם נכנסים לחדר ומרגישים בעלי כוח",
@@ -970,6 +992,13 @@
     document.getElementById('sub-done-wait').textContent = t('waitingForOthers');
     document.getElementById('sub-advance-btn').textContent = t('everyonesIn');
 
+    // Submitting: spectator
+    document.getElementById('sub-spectator-title').textContent = t('joinedMidRound');
+    document.getElementById('sub-spectator-msg').textContent = t('playNextRound');
+
+    // Guessing: spectator
+    document.getElementById('guess-spectator-title').textContent = t('watchingThisRound');
+
     // Guessing
     document.getElementById('guess-who-label').innerHTML =
       '<span class="icon-think"></span>' + t('whoSubmitted');
@@ -1030,6 +1059,10 @@
       sessionStorage.setItem('roomCode', state.roomCode);
       sessionStorage.setItem('playerName', state.myName);
       render();
+    });
+
+    socket.on('host-changed', (data) => {
+      showToast(t('hostChanged', { name: data.name }));
     });
 
     socket.on('room-closed', () => {
@@ -1214,12 +1247,18 @@
     document.getElementById('sub-progress').style.width = pct + '%';
     document.getElementById('sub-status').textContent = t('songsSubmitted', { count: s.submittedCount, total: s.totalPlayers });
 
-    if (s.hasSubmitted) {
+    if (s.isSpectator) {
+      document.getElementById('sub-form').style.display = 'none';
+      document.getElementById('sub-done').style.display = 'none';
+      document.getElementById('sub-spectator').style.display = 'block';
+    } else if (s.hasSubmitted) {
       document.getElementById('sub-form').style.display = 'none';
       document.getElementById('sub-done').style.display = 'block';
+      document.getElementById('sub-spectator').style.display = 'none';
     } else {
       document.getElementById('sub-form').style.display = 'flex';
       document.getElementById('sub-done').style.display = 'none';
+      document.getElementById('sub-spectator').style.display = 'none';
     }
 
     const advanceEl = document.getElementById('sub-host-advance');
@@ -1253,20 +1292,28 @@
 
     const isOwnSong = s.currentSong?.isMySubmission;
 
-    if (isOwnSong) {
+    if (s.isSpectator) {
+      document.getElementById('guess-own-song').style.display = 'none';
+      document.getElementById('guess-vote-ui').style.display = 'none';
+      document.getElementById('guess-voted').style.display = 'none';
+      document.getElementById('guess-spectator').style.display = 'block';
+    } else if (isOwnSong) {
       document.getElementById('guess-own-song').style.display = 'block';
       document.getElementById('guess-vote-ui').style.display = 'none';
       document.getElementById('guess-voted').style.display = 'none';
+      document.getElementById('guess-spectator').style.display = 'none';
     } else if (s.hasVoted) {
       document.getElementById('guess-own-song').style.display = 'none';
       document.getElementById('guess-vote-ui').style.display = 'none';
       document.getElementById('guess-voted').style.display = 'block';
+      document.getElementById('guess-spectator').style.display = 'none';
       document.getElementById('guess-vote-status').textContent =
         t('votesIn', { count: s.votedCount, total: s.eligibleVoters });
     } else {
       document.getElementById('guess-own-song').style.display = 'none';
       document.getElementById('guess-vote-ui').style.display = 'block';
       document.getElementById('guess-voted').style.display = 'none';
+      document.getElementById('guess-spectator').style.display = 'none';
 
       const grid = document.getElementById('guess-vote-grid');
       const otherPlayers = s.players.filter(n => n !== s.myName);

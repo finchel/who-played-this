@@ -41,9 +41,12 @@ function broadcastState(code) {
     ? room.shuffledSongs[room.currentIndex]
     : null;
 
+  const activePlayerCount = room.players.filter(p => !room.midRoundJoiners.has(p.name)).length;
+
   room.players.forEach(p => {
     const isHost = p.socketId === room.hostSocketId;
     const isSubmitter = currentSong && currentSong.submittedBy === p.name;
+    const isSpectator = room.midRoundJoiners.has(p.name);
 
     const state = {
       phase: room.phase,
@@ -51,12 +54,13 @@ function broadcastState(code) {
       players: room.players.map(pl => pl.name),
       hostName: room.hostName,
       isHost,
+      isSpectator,
       myName: p.name,
       currentIndex: room.currentIndex,
       totalSongs: room.shuffledSongs.length || 0,
       scores: room.scores,
       submittedCount: Object.keys(room.submissions).length,
-      totalPlayers: room.players.length,
+      totalPlayers: activePlayerCount,
       currentSong: currentSong ? {
         title: currentSong.title,
         artist: currentSong.artist,
@@ -65,7 +69,7 @@ function broadcastState(code) {
         isMySubmission: isSubmitter
       } : null,
       votedCount: Object.keys(room.votes).length,
-      eligibleVoters: room.players.length - 1,
+      eligibleVoters: activePlayerCount - 1,
       hasVoted: !!room.votes[p.name],
       hasSubmitted: !!room.submissions[p.name],
       revealVotes: room.phase === 'reveal' ? room.votes : null,
@@ -102,7 +106,8 @@ io.on('connection', (socket) => {
       votes: {},
       scores: { [trimmed]: 0 },
       roundNumber: 0,
-      prompts: shuffle(Array.from({length: PROMPT_COUNT}, (_, i) => i))
+      prompts: shuffle(Array.from({length: PROMPT_COUNT}, (_, i) => i)),
+      midRoundJoiners: new Set()
     };
 
     currentRoom = code;
@@ -120,10 +125,12 @@ io.on('connection', (socket) => {
 
     const room = rooms[code];
     if (!room) return callback({ error: 'err_roomNotFound' });
-    if (room.phase !== 'lobby') return callback({ error: 'err_gameInProgress' });
     if (room.players.find(p => p.name.toLowerCase() === name.toLowerCase()))
       return callback({ error: 'err_nameTaken' });
     if (room.players.length >= 10) return callback({ error: 'err_roomFull' });
+    if (room.phase !== 'lobby') {
+      room.midRoundJoiners.add(name);
+    }
 
     room.players.push({ name, socketId: socket.id });
     room.scores[name] = 0;
@@ -140,6 +147,7 @@ io.on('connection', (socket) => {
     if (room.players.length < 2) return;
 
     room.roundNumber++;
+    room.midRoundJoiners = new Set();
     const idx = (room.roundNumber - 1) % room.prompts.length;
     room.prompt = room.prompts[idx];
     room.phase = 'submitting';
@@ -153,6 +161,7 @@ io.on('connection', (socket) => {
   socket.on('submit-song', (data, callback) => {
     const room = rooms[currentRoom];
     if (!room || room.phase !== 'submitting') return;
+    if (room.midRoundJoiners.has(currentName)) return;
     if (!data.title?.trim()) return callback?.({ error: 'err_songRequired' });
 
     room.submissions[currentName] = {
@@ -180,6 +189,7 @@ io.on('connection', (socket) => {
   socket.on('submit-vote', (data, callback) => {
     const room = rooms[currentRoom];
     if (!room || room.phase !== 'guessing') return;
+    if (room.midRoundJoiners.has(currentName)) return;
 
     const currentSong = room.shuffledSongs[room.currentIndex];
     if (currentName === currentSong.submittedBy) return;
@@ -241,6 +251,7 @@ io.on('connection', (socket) => {
     const room = rooms[currentRoom];
     if (!room || socket.id !== room.hostSocketId) return;
     room.phase = 'lobby';
+    room.midRoundJoiners = new Set();
     broadcastState(currentRoom);
   });
 
@@ -260,7 +271,7 @@ io.on('connection', (socket) => {
     }
 
     const player = room.players.find(p => p.name === name);
-    if (!player) return callback({ error: 'err_roomNotFound' });
+    if (!player) return callback({ error: 'err_playerNotInRoom' });
 
     // Update socket ID
     player.socketId = socket.id;
@@ -288,14 +299,24 @@ io.on('connection', (socket) => {
       const r = rooms[disconnectedRoom];
       if (!r) return;
 
-      if (r.hostName === disconnectedName) {
-        io.to(disconnectedRoom).emit('room-closed');
+      // Remove the disconnected player
+      r.players = r.players.filter(p => p.name !== disconnectedName);
+      delete r.scores[disconnectedName];
+      delete r.submissions[disconnectedName];
+      delete r.votes[disconnectedName];
+      r.midRoundJoiners.delete(disconnectedName);
+
+      if (r.players.length === 0) {
+        // No one left — delete room
         delete rooms[disconnectedRoom];
+      } else if (r.hostName === disconnectedName) {
+        // Promote new host
+        const newHost = r.players[0];
+        r.hostName = newHost.name;
+        r.hostSocketId = newHost.socketId;
+        io.to(disconnectedRoom).emit('host-changed', { name: newHost.name });
+        broadcastState(disconnectedRoom);
       } else {
-        r.players = r.players.filter(p => p.name !== disconnectedName);
-        delete r.scores[disconnectedName];
-        delete r.submissions[disconnectedName];
-        delete r.votes[disconnectedName];
         broadcastState(disconnectedRoom);
       }
     }, 60000);
