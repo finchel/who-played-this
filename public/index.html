@@ -486,11 +486,30 @@
       backdrop-filter: blur(8px);
     }
     .lang-toggle:hover { background: var(--surface-hover); color: var(--text); }
+
+    .host-room-code {
+      position: fixed;
+      top: 16px;
+      inset-inline-start: 16px;
+      z-index: 100;
+      padding: 6px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--blue);
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      backdrop-filter: blur(8px);
+      direction: ltr;
+    }
   </style>
 </head>
 <body>
 
 <button class="lang-toggle" id="lang-toggle" onclick="toggleLang()"></button>
+<div class="host-room-code" id="host-room-code" style="display:none;"></div>
 
 <!-- ═══ HOME SCREEN ═══ -->
 <div id="screen-home" class="screen active">
@@ -735,216 +754,18 @@
   'use strict';
 
   // ─── Translations ───────────────────────────
-  const translations = {
-    en: {
-      pageTitle: 'Who Played This?',
-      homeTitle: 'WHO<br>PLAYED<br>THIS?',
-      homeSubtitle: 'Submit songs. Guess who picked what.<br>Prove you know your people.',
-      homeInstructions: '<strong>🎧 How to play?</strong><br><br>Each player gets a topic and secretly picks a song<br>Songs play one by one<br>Guess who picked each song<br>Nobody guessed your song? +2 bonus points<br><br><strong>🏆 Whoever knows their friends best — wins!</strong>',
-      namePlaceholder: 'Your name',
-      startNewRoom: 'Start New Room',
-      joinARoom: 'Join a Room',
-      createGame: 'Create Game',
-      back: 'Back',
-      roomCodePlaceholder: 'Room code',
-      join: 'Join',
-      roomCodeLabel: 'Room Code',
-      shareCode: 'Share this code with your players',
-      playersLabel: 'Players',
-      startRound: 'Start Round',
-      waitingForHost: 'Waiting for host to start the round...',
-      needMorePlayers: 'Need at least 2 players to start',
-      playersReady: '{count} players ready',
-      hostBadge: ' (host)',
-      youBadge: ' (you)',
-      roundLabel: 'Round',
-      songTitlePlaceholder: 'Song title',
-      artistPlaceholder: 'Artist (optional)',
-      submitSong: 'Submit Song',
-      songSubmitted: 'Song submitted!',
-      waitingForOthers: 'Waiting for other players...',
-      songsSubmitted: '{count} / {total} songs submitted',
-      everyonesIn: "Everyone's In - Let's Go!",
-      songLabel: 'Song',
-      ofLabel: 'of',
-      playOnYoutube: 'Play on YouTube',
-      ytPreview: 'YouTube search: {query}',
-      yourSong: 'This is YOUR song!',
-      sitBack: 'Sit back and watch them guess...',
-      whoSubmitted: 'Who submitted this?',
-      confidenceLabel: 'Confidence (risk/reward)',
-      confSafe: '1x Safe',
-      confBold: '2x Bold',
-      confYolo: '3x YOLO',
-      lockInGuess: 'Lock In My Guess',
-      voteLocked: 'Vote locked in!',
-      votesIn: '{count} / {total} votes in',
-      revealWho: 'Reveal Who Played This!',
-      unknownArtist: 'Unknown artist',
-      submittedByLabel: 'Submitted by',
-      stealthBonus: '+2 Stealth Bonus - Nobody guessed it!',
-      guessesLabel: 'Guesses',
-      guessed: 'guessed',
-      submitterLabel: '(submitter)',
-      noVotes: 'No votes this round',
-      nextSong: 'Next Song',
-      finalScoresBtn: 'Final Scores',
-      waitingNextSong: 'Waiting for next song...',
-      wins: '{name} wins!',
-      finalScoreboard: 'Final Scoreboard',
-      pts: 'pts',
-      nextRound: 'Next Round',
-      backToLobby: 'Back to Lobby',
-      waitingForHostGeneric: 'Waiting for host...',
-      disconnected: 'Disconnected',
-      lostConnection: 'Lost connection to the game.',
-      hostEndedGame: 'The host ended the game.',
-      lostConnectionRejoin: 'Lost connection. Please rejoin.',
-      backToHome: 'Back to Home',
-      enterName: 'Enter your name first!',
-      enterRoomCode: 'Enter a 4-letter room code',
-      enterSongTitle: 'Enter a song title!',
-      selectPlayer: 'Select a player first!',
-      err_invalidName: 'Invalid name',
-      err_invalidNameLength: 'Invalid name (1-20 characters)',
-      err_roomNotFound: 'Room not found. Check the code and try again.',
-      err_gameInProgress: 'Game already in progress. Wait for the next round.',
-      err_nameTaken: 'That name is taken. Pick another one!',
-      err_roomFull: 'Room is full (max 10 players).',
-      err_songRequired: 'Song title is required',
-      err_playerNotInRoom: 'You were removed. Use "Join" to rejoin.',
-      joinedMidRound: 'You joined mid-round',
-      playNextRound: "You'll play in the next round!",
-      watchingThisRound: 'Watching this round',
-      hostChanged: '{name} is now the host',
-      prompts: [
-        "A song you secretly love but would NEVER admit in public",
-        "The song that plays when you enter a room feeling powerful",
-        "A song that perfectly describes your love life right now",
-        "Your ultimate shower anthem",
-        "A song you'd play at a funeral for your worst enemy",
-        "The song that makes you ugly cry every single time",
-        "Your go-to karaoke song after two drinks",
-        "A song you've listened to 100+ times and never got tired of",
-        "A song that instantly takes you back to a specific memory",
-        "A song you think nobody else in this room knows",
-        "The most romantic song you know",
-        "A song that makes you want to dance alone in your room",
-        "Your favorite song from before you were born",
-        "A song you'd choose as your life's movie soundtrack",
-        "The song you want played at your wedding",
-        "A song that always makes you smile no matter what",
-        "The song that defined your teenage years",
-        "A song you'd blast at maximum volume on a road trip",
-        "A song that makes you feel like the main character",
-        "The most underrated song you know"
-      ]
-    },
-    he: {
-      pageTitle: 'מי בחר את השיר?',
-      homeTitle: 'מי<br>בחר<br>את השיר?',
-      homeSubtitle: 'שלחו שירים. נחשו מי בחר מה.<br>תוכיחו שאתם מכירים אחד את השני.',
-      homeInstructions: '<strong>🎧 איך משחקים?</strong><br><br>כל שחקן מקבל נושא ובוחר שיר בסתר<br>השירים מתנגנים אחד אחד<br>מנחשים מי בחר כל שיר<br>אף אחד לא ניחש את השיר שלכם? בונוס +2 נקודות<br><br><strong>🏆 מי שמכיר את החברים הכי טוב - מנצח!</strong>',
-      namePlaceholder: 'השם שלך',
-      startNewRoom: 'התחל חדר חדש',
-      joinARoom: 'הצטרף לחדר',
-      createGame: 'צור משחק',
-      back: 'חזרה',
-      roomCodePlaceholder: 'קוד חדר',
-      join: 'הצטרף',
-      roomCodeLabel: 'קוד חדר',
-      shareCode: 'שתפו את הקוד עם השחקנים',
-      playersLabel: 'שחקנים',
-      startRound: 'התחל סיבוב',
-      waitingForHost: 'ממתינים למארח להתחיל את הסיבוב...',
-      needMorePlayers: 'צריך לפחות 2 שחקנים כדי להתחיל',
-      playersReady: '{count} שחקנים מוכנים',
-      hostBadge: ' (מארח)',
-      youBadge: ' (את/ה)',
-      roundLabel: 'סיבוב',
-      songTitlePlaceholder: 'שם השיר',
-      artistPlaceholder: 'אמן (אופציונלי)',
-      submitSong: 'שלח שיר',
-      songSubmitted: 'השיר נשלח!',
-      waitingForOthers: 'ממתינים לשחקנים אחרים...',
-      songsSubmitted: '{count} / {total} שירים נשלחו',
-      everyonesIn: 'כולם בפנים - יאללה!',
-      songLabel: 'שיר',
-      ofLabel: 'מתוך',
-      playOnYoutube: 'נגן ביוטיוב',
-      ytPreview: 'חיפוש ביוטיוב: {query}',
-      yourSong: 'זה השיר שלך!',
-      sitBack: 'שבו בצד ותנו להם לנחש...',
-      whoSubmitted: 'מי שלח את השיר הזה?',
-      confidenceLabel: 'ביטחון (סיכון/סיכוי)',
-      confSafe: '1x בטוח',
-      confBold: '2x אמיץ',
-      confYolo: '3x יאללה',
-      lockInGuess: 'נעל את הניחוש',
-      voteLocked: 'הניחוש ננעל!',
-      votesIn: '{count} / {total} הצבעות',
-      revealWho: 'חשפו מי בחר את השיר!',
-      unknownArtist: 'אמן לא ידוע',
-      submittedByLabel: 'נשלח על ידי',
-      stealthBonus: '+2 בונוס התגנבות - אף אחד לא ניחש!',
-      guessesLabel: 'ניחושים',
-      guessed: 'ניחש',
-      submitterLabel: '(השולח)',
-      noVotes: 'אין הצבעות בסיבוב הזה',
-      nextSong: 'השיר הבא',
-      finalScoresBtn: 'תוצאות סופיות',
-      waitingNextSong: 'ממתינים לשיר הבא...',
-      wins: '{name} ניצח!',
-      finalScoreboard: 'טבלת ניקוד סופית',
-      pts: 'נק׳',
-      nextRound: 'סיבוב הבא',
-      backToLobby: 'חזרה ללובי',
-      waitingForHostGeneric: 'ממתינים למארח...',
-      disconnected: 'התנתקת',
-      lostConnection: 'החיבור למשחק אבד.',
-      hostEndedGame: 'המארח סיים את המשחק.',
-      lostConnectionRejoin: 'החיבור אבד. אנא הצטרפו מחדש.',
-      backToHome: 'חזרה לדף הבית',
-      enterName: 'הכניסו שם קודם!',
-      enterRoomCode: 'הכניסו קוד חדר בן 4 תווים',
-      enterSongTitle: 'הכניסו שם שיר!',
-      selectPlayer: 'בחרו שחקן קודם!',
-      err_invalidName: 'שם לא תקין',
-      err_invalidNameLength: 'שם לא תקין (1-20 תווים)',
-      err_roomNotFound: 'חדר לא נמצא. בדקו את הקוד ונסו שוב.',
-      err_gameInProgress: 'המשחק כבר התחיל. חכו לסיבוב הבא.',
-      err_nameTaken: 'השם תפוס. בחרו שם אחר!',
-      err_roomFull: 'החדר מלא (מקסימום 10 שחקנים).',
-      err_songRequired: 'שם השיר הוא שדה חובה',
-      err_playerNotInRoom: 'הוסרת מהחדר. השתמשו ב"הצטרף" כדי לחזור.',
-      joinedMidRound: 'הצטרפת באמצע הסיבוב',
-      playNextRound: 'תשחקו בסיבוב הבא!',
-      watchingThisRound: 'צופים בסיבוב הזה',
-      hostChanged: '{name} הוא עכשיו המארח',
-      prompts: [
-        "שיר שאתם אוהבים בסתר אבל לעולם לא הייתם מודים בפומבי",
-        "השיר שמתנגן כשאתם נכנסים לחדר ומרגישים בעלי כוח",
-        "שיר שמתאר בדיוק את חיי האהבה שלכם עכשיו",
-        "המנון המקלחת האולטימטיבי שלכם",
-        "שיר שהייתם מנגנים בהלוויה של האויב הכי גדול שלכם",
-        "השיר שגורם לכם לבכות בכי מכוער כל פעם",
-        "שיר הקריוקי שלכם אחרי שתי כוסות",
-        "שיר ששמעתם יותר מ-100 פעמים ואף פעם לא נמאס",
-        "שיר שמחזיר אתכם מיד לזיכרון ספציפי",
-        "שיר שאתם חושבים שאף אחד בחדר לא מכיר",
-        "השיר הכי רומנטי שאתם מכירים",
-        "שיר שגורם לכם לרקוד לבד בחדר",
-        "השיר האהוב עליכם מלפני שנולדתם",
-        "שיר שהייתם בוחרים כפסקול לסרט החיים שלכם",
-        "השיר שאתם רוצים שינגנו בחתונה שלכם",
-        "שיר שתמיד גורם לכם לחייך לא משנה מה",
-        "השיר שהגדיר את שנות העשרה שלכם",
-        "שיר שהייתם מנגנים בווליום מקסימלי בטיול רכב",
-        "שיר שגורם לכם להרגיש כמו הדמות הראשית",
-        "השיר הכי לא מוערך שאתם מכירים"
-      ]
-    }
-  };
+  let translations = { en: {}, he: {} };
+  let translationsLoaded = false;
+
+  async function loadTranslations() {
+    const [enRes, heRes] = await Promise.all([
+      fetch('/i18n/en.json'),
+      fetch('/i18n/he.json')
+    ]);
+    translations.en = await enRes.json();
+    translations.he = await heRes.json();
+    translationsLoaded = true;
+  }
 
   let currentLang = localStorage.getItem('lang') || 'he';
 
@@ -1197,8 +1018,13 @@
   }
 
   function render() {
-    if (!gameState) return;
+    if (!gameState || !translationsLoaded) return;
     const s = gameState;
+
+    const hostCodeEl = document.getElementById('host-room-code');
+    const showHostCode = s.isHost && s.phase !== 'lobby';
+    hostCodeEl.style.display = showHostCode ? 'block' : 'none';
+    if (showHostCode) hostCodeEl.textContent = s.roomCode;
 
     switch(s.phase) {
       case 'lobby': renderLobby(s); break;
@@ -1443,7 +1269,14 @@
   });
 
   // ─── Init ───────────────────────────────────
-  applyStaticTranslations();
+  loadTranslations().then(() => {
+    applyStaticTranslations();
+    if (gameState) render();
+  }).catch(err => {
+    console.error('Failed to load translations:', err);
+    translationsLoaded = true;
+    applyStaticTranslations();
+  });
 
 })();
 </script>

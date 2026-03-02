@@ -83,6 +83,30 @@ function broadcastState(code) {
   });
 }
 
+function performReveal(room, code) {
+  const currentSong = room.shuffledSongs[room.currentIndex];
+
+  // Score calculation
+  Object.entries(room.votes).forEach(([voter, vote]) => {
+    if (vote.guess === currentSong.submittedBy) {
+      room.scores[voter] = (room.scores[voter] || 0) + vote.confidence;
+    } else {
+      if (vote.confidence > 1) {
+        room.scores[voter] = (room.scores[voter] || 0) - (vote.confidence - 1);
+      }
+    }
+  });
+
+  // Stealth bonus: nobody guessed correctly
+  const anyCorrect = Object.values(room.votes).some(v => v.guess === currentSong.submittedBy);
+  if (!anyCorrect && Object.keys(room.votes).length > 0) {
+    room.scores[currentSong.submittedBy] = (room.scores[currentSong.submittedBy] || 0) + 2;
+  }
+
+  room.phase = 'reveal';
+  broadcastState(code);
+}
+
 // ─── Socket Events ────────────────────────────────────────────
 io.on('connection', (socket) => {
   let currentRoom = null;
@@ -200,36 +224,21 @@ io.on('connection', (socket) => {
     };
 
     callback?.({ success: true });
-    broadcastState(currentRoom);
+
+    const activePlayerCount = room.players.filter(p => !room.midRoundJoiners.has(p.name)).length;
+    const eligibleVoters = activePlayerCount - 1;
+    if (Object.keys(room.votes).length >= eligibleVoters) {
+      performReveal(room, currentRoom);
+    } else {
+      broadcastState(currentRoom);
+    }
   });
 
   socket.on('reveal', () => {
     const room = rooms[currentRoom];
     if (!room || socket.id !== room.hostSocketId) return;
-
-    const currentSong = room.shuffledSongs[room.currentIndex];
-
-    // Score calculation
-    Object.entries(room.votes).forEach(([voter, vote]) => {
-      if (vote.guess === currentSong.submittedBy) {
-        // Correct: earn confidence points
-        room.scores[voter] = (room.scores[voter] || 0) + vote.confidence;
-      } else {
-        // Wrong with high confidence: lose extra
-        if (vote.confidence > 1) {
-          room.scores[voter] = (room.scores[voter] || 0) - (vote.confidence - 1);
-        }
-      }
-    });
-
-    // Stealth bonus: nobody guessed correctly
-    const anyCorrect = Object.values(room.votes).some(v => v.guess === currentSong.submittedBy);
-    if (!anyCorrect && Object.keys(room.votes).length > 0) {
-      room.scores[currentSong.submittedBy] = (room.scores[currentSong.submittedBy] || 0) + 2;
-    }
-
-    room.phase = 'reveal';
-    broadcastState(currentRoom);
+    if (room.phase !== 'guessing') return;
+    performReveal(room, currentRoom);
   });
 
   socket.on('next-song', () => {
