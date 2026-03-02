@@ -504,11 +504,25 @@
   </div>
 
   <div style="width:100%; max-width:420px; display:flex; flex-direction:column; gap:12px; padding-bottom:32px;">
-    <input type="text" id="home-name" class="input" placeholder="Your name" maxlength="20" autocomplete="off">
-    <button class="btn btn-primary" id="home-create-btn" onclick="createRoom()">Create Game</button>
-    <div style="display:flex; gap:8px;">
+    <!-- Step 1: Choose action -->
+    <div id="home-choice" style="display:flex; flex-direction:column; gap:10px;">
+      <button class="btn btn-primary" id="home-new-btn" onclick="showHomeForm('create')">Start New Room</button>
+      <button class="btn btn-ghost" id="home-existing-btn" onclick="showHomeForm('join')">Join a Room</button>
+    </div>
+
+    <!-- Step 2a: Create room form -->
+    <div id="home-create-form" style="display:none; flex-direction:column; gap:12px;">
+      <input type="text" id="home-name" class="input" placeholder="Your name" maxlength="20" autocomplete="off">
+      <button class="btn btn-primary" id="home-create-btn" onclick="createRoom()">Create Game</button>
+      <button class="btn btn-ghost" id="home-back-create" onclick="showHomeForm('back')" style="font-size:0.85rem;">Back</button>
+    </div>
+
+    <!-- Step 2b: Join room form -->
+    <div id="home-join-form" style="display:none; flex-direction:column; gap:12px;">
+      <input type="text" id="home-join-name" class="input" placeholder="Your name" maxlength="20" autocomplete="off">
       <input type="text" id="home-code" class="input" placeholder="Room code" maxlength="4" style="text-transform:uppercase; letter-spacing:4px; text-align:center; font-weight:700;" autocomplete="off">
-      <button class="btn btn-ghost" id="home-join-btn" onclick="joinRoom()" style="width:auto; min-width:100px;">Join</button>
+      <button class="btn btn-primary" id="home-join-btn" onclick="joinRoom()">Join</button>
+      <button class="btn btn-ghost" id="home-back-join" onclick="showHomeForm('back')" style="font-size:0.85rem;">Back</button>
     </div>
   </div>
 </div>
@@ -716,7 +730,10 @@
       homeSubtitle: 'Submit songs. Guess who picked what.<br>Prove you know your people.',
       homeInstructions: '<strong>🎧 How to play?</strong><br><br>Each player gets a topic and secretly picks a song<br>Songs play one by one<br>Guess who picked each song<br>Nobody guessed your song? +2 bonus points<br><br><strong>🏆 Whoever knows their friends best — wins!</strong>',
       namePlaceholder: 'Your name',
+      startNewRoom: 'Start New Room',
+      joinARoom: 'Join a Room',
       createGame: 'Create Game',
+      back: 'Back',
       roomCodePlaceholder: 'Room code',
       join: 'Join',
       roomCodeLabel: 'Room Code',
@@ -812,7 +829,10 @@
       homeSubtitle: 'שלחו שירים. נחשו מי בחר מה.<br>תוכיחו שאתם מכירים אחד את השני.',
       homeInstructions: '<strong>🎧 איך משחקים?</strong><br><br>כל שחקן מקבל נושא ובוחר שיר בסתר<br>השירים מתנגנים אחד אחד<br>מנחשים מי בחר כל שיר<br>אף אחד לא ניחש את השיר שלכם? בונוס +2 נקודות<br><br><strong>🏆 מי שמכיר את החברים הכי טוב - מנצח!</strong>',
       namePlaceholder: 'השם שלך',
+      startNewRoom: 'התחל חדר חדש',
+      joinARoom: 'הצטרף לחדר',
       createGame: 'צור משחק',
+      back: 'חזרה',
       roomCodePlaceholder: 'קוד חדר',
       join: 'הצטרף',
       roomCodeLabel: 'קוד חדר',
@@ -925,10 +945,15 @@
     document.getElementById('home-title').innerHTML = t('homeTitle');
     document.getElementById('home-subtitle').innerHTML = t('homeSubtitle');
     document.getElementById('home-instructions').innerHTML = t('homeInstructions');
+    document.getElementById('home-new-btn').textContent = t('startNewRoom');
+    document.getElementById('home-existing-btn').textContent = t('joinARoom');
     document.getElementById('home-name').placeholder = t('namePlaceholder');
-    document.getElementById('home-code').placeholder = t('roomCodePlaceholder');
     document.getElementById('home-create-btn').textContent = t('createGame');
+    document.getElementById('home-back-create').textContent = t('back');
+    document.getElementById('home-join-name').placeholder = t('namePlaceholder');
+    document.getElementById('home-code').placeholder = t('roomCodePlaceholder');
     document.getElementById('home-join-btn').textContent = t('join');
+    document.getElementById('home-back-join').textContent = t('back');
 
     // Lobby
     document.getElementById('lobby-code-label').textContent = t('roomCodeLabel');
@@ -1040,6 +1065,12 @@
   }
 
   // ─── Actions ────────────────────────────────
+  window.showHomeForm = function(mode) {
+    document.getElementById('home-choice').style.display = mode === 'back' ? 'flex' : 'none';
+    document.getElementById('home-create-form').style.display = mode === 'create' ? 'flex' : 'none';
+    document.getElementById('home-join-form').style.display = mode === 'join' ? 'flex' : 'none';
+  };
+
   window.createRoom = function() {
     const name = document.getElementById('home-name').value.trim();
     if (!name) return showToast(t('enterName'));
@@ -1050,7 +1081,7 @@
   };
 
   window.joinRoom = function() {
-    const name = document.getElementById('home-name').value.trim();
+    const name = document.getElementById('home-join-name').value.trim();
     const code = document.getElementById('home-code').value.trim().toUpperCase();
     if (!name) return showToast(t('enterName'));
     if (!code || code.length !== 4) return showToast(t('enterRoomCode'));
@@ -1354,9 +1385,10 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       const active = document.activeElement;
-      if (active.id === 'home-name' || active.id === 'home-code') {
-        const code = document.getElementById('home-code').value.trim();
-        if (code) joinRoom(); else createRoom();
+      if (active.id === 'home-name') {
+        createRoom();
+      } else if (active.id === 'home-join-name' || active.id === 'home-code') {
+        joinRoom();
       } else if (active.id === 'sub-title' || active.id === 'sub-artist') {
         submitSong();
       }
