@@ -775,6 +775,12 @@
     return val.replace(/\{(\w+)\}/g, (_, k) => params[k] !== undefined ? params[k] : `{${k}}`);
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
   function applyStaticTranslations() {
     const doc = document.documentElement;
     doc.lang = currentLang === 'he' ? 'he' : 'en';
@@ -1043,7 +1049,7 @@
     list.innerHTML = s.players.map(name => {
       const cls = name === s.hostName ? 'host' : (name === s.myName ? 'me' : '');
       const label = name === s.hostName ? t('hostBadge') : (name === s.myName ? t('youBadge') : '');
-      return `<div class="player-chip ${cls}">${name}${label}</div>`;
+      return `<div class="player-chip ${cls}">${escapeHtml(name)}${label}</div>`;
     }).join('');
 
     if (s.isHost) {
@@ -1144,7 +1150,7 @@
       const grid = document.getElementById('guess-vote-grid');
       const otherPlayers = s.players.filter(n => n !== s.myName);
       grid.innerHTML = otherPlayers.map(name =>
-        `<button class="vote-option ${selectedVote === name ? 'selected' : ''}" data-name="${name}" onclick="selectVote('${name.replace(/'/g, "\\'")}')">${name}</button>`
+        `<button class="vote-option ${selectedVote === name ? 'selected' : ''}" data-name="${escapeHtml(name)}" onclick="selectVote(this.dataset.name)">${escapeHtml(name)}</button>`
       ).join('');
 
       // Reset confidence buttons to match current state
@@ -1184,7 +1190,7 @@
         const confLabel = vote.confidence > 1 ? ` (${vote.confidence}x)` : '';
         const points = correct ? `+${vote.confidence}` : (vote.confidence > 1 ? `-${vote.confidence - 1}` : '0');
         html += `<div class="reveal-vote-row" style="animation-delay:${i * 0.1}s">
-          <span>${voter} ${t('guessed')} <strong>${vote.guess}</strong>${confLabel}</span>
+          <span>${escapeHtml(voter)} ${t('guessed')} <strong>${escapeHtml(vote.guess)}</strong>${confLabel}</span>
           <span class="badge ${correct ? 'badge-correct' : 'badge-wrong'}">${points}</span>
         </div>`;
       });
@@ -1194,7 +1200,7 @@
       if (submitterInPlayers) {
         const stealthPts = s.nobodyGuessed ? '+2' : '0';
         html += `<div class="reveal-vote-row" style="animation-delay:${Object.keys(s.revealVotes).length * 0.1}s">
-          <span>${submitter} <em style="color:var(--text-dim);">${t('submitterLabel')}</em></span>
+          <span>${escapeHtml(submitter)} <em style="color:var(--text-dim);">${t('submitterLabel')}</em></span>
           <span class="badge badge-stealth">${stealthPts}</span>
         </div>`;
       }
@@ -1230,7 +1236,7 @@
       const isMe = name === s.myName;
       return `<div class="score-row ${isFirst ? 'first' : ''}" style="animation-delay:${i * 0.12}s; ${isMe ? 'border-color:var(--blue);' : ''}">
         <span class="score-rank">${medal}</span>
-        <span class="score-name">${name}${isMe ? t('youBadge') : ''}</span>
+        <span class="score-name">${escapeHtml(name)}${isMe ? t('youBadge') : ''}</span>
         <span class="score-points">${pts} ${t('pts')}</span>
       </div>`;
     }).join('');
@@ -1277,6 +1283,19 @@
     translationsLoaded = true;
     applyStaticTranslations();
   });
+
+  // Auto-rejoin on fresh page load (browser was closed and reopened)
+  const savedCode = sessionStorage.getItem('roomCode');
+  const savedName = sessionStorage.getItem('playerName');
+  if (savedCode && savedName) {
+    connectSocket();
+    socket.emit('rejoin', { code: savedCode, name: savedName }, (res) => {
+      if (res.error) {
+        sessionStorage.removeItem('roomCode');
+        sessionStorage.removeItem('playerName');
+      }
+    });
+  }
 
 })();
 </script>

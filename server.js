@@ -149,8 +149,28 @@ io.on('connection', (socket) => {
 
     const room = rooms[code];
     if (!room) return callback({ error: 'err_roomNotFound' });
-    if (room.players.find(p => p.name.toLowerCase() === name.toLowerCase()))
+
+    // Check if the name belongs to a disconnected player in grace period
+    const existingPlayer = room.players.find(p => p.name.toLowerCase() === name.toLowerCase());
+    if (existingPlayer) {
+      const timerKey = `${existingPlayer.name}:${code}`;
+      if (disconnectTimers[timerKey]) {
+        // Cancel disconnect timer and take over the slot
+        clearTimeout(disconnectTimers[timerKey]);
+        delete disconnectTimers[timerKey];
+        existingPlayer.socketId = socket.id;
+        if (room.hostName === existingPlayer.name) {
+          room.hostSocketId = socket.id;
+        }
+        currentRoom = code;
+        currentName = existingPlayer.name;
+        socket.join(code);
+        callback({ success: true });
+        broadcastState(code);
+        return;
+      }
       return callback({ error: 'err_nameTaken' });
+    }
     if (room.players.length >= 10) return callback({ error: 'err_roomFull' });
     if (room.phase !== 'lobby') {
       room.midRoundJoiners.add(name);
@@ -189,8 +209,8 @@ io.on('connection', (socket) => {
     if (!data.title?.trim()) return callback?.({ error: 'err_songRequired' });
 
     room.submissions[currentName] = {
-      title: data.title.trim(),
-      artist: (data.artist || '').trim(),
+      title: data.title.trim().slice(0, 100),
+      artist: (data.artist || '').trim().slice(0, 100),
       submittedBy: currentName
     };
 
@@ -217,6 +237,9 @@ io.on('connection', (socket) => {
 
     const currentSong = room.shuffledSongs[room.currentIndex];
     if (currentName === currentSong.submittedBy) return;
+
+    // Guess must be an actual player in the room
+    if (!room.players.some(p => p.name === data.guess)) return callback?.({ error: 'err_invalidGuess' });
 
     room.votes[currentName] = {
       guess: data.guess,
