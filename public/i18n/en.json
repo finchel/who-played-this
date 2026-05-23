@@ -12,6 +12,7 @@
   "join": "Join",
   "roomCodeLabel": "Room Code",
   "shareCode": "Share this code with your players",
+  "scanToJoin": "Scan to join",
   "playersLabel": "Players",
   "startRound": "Start Round",
   "waitingForHost": "Waiting for host to start the round...",

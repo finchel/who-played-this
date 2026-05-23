@@ -554,6 +554,9 @@
   <div class="room-code" id="lobby-code"></div>
   <div class="spacer-sm"></div>
   <p class="subtitle" id="lobby-share-text">Share this code with your players</p>
+  <div class="spacer-sm"></div>
+  <div id="lobby-qr" style="display:none; background:#fff; padding:12px; border-radius:16px; line-height:0;"></div>
+  <p class="subtitle" id="lobby-qr-text" style="display:none; font-size:0.8rem; margin-top:8px;">Scan to join</p>
   <div class="spacer-lg"></div>
 
   <p class="label" id="lobby-players-label">Players</p>
@@ -749,6 +752,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/qrcode.min.js"></script>
 <script>
 (function() {
   'use strict';
@@ -807,6 +811,7 @@
     // Lobby
     document.getElementById('lobby-code-label').textContent = t('roomCodeLabel');
     document.getElementById('lobby-share-text').textContent = t('shareCode');
+    document.getElementById('lobby-qr-text').textContent = t('scanToJoin');
     document.getElementById('lobby-players-label').textContent = t('playersLabel');
     document.getElementById('lobby-start-text').textContent = t('startRound');
     document.getElementById('lobby-wait-text').textContent = t('waitingForHost');
@@ -874,6 +879,7 @@
   let gameState = null;
   let selectedVote = null;
   let selectedConf = 1;
+  let qrForCode = null;
   let lastRoundNumber = 0;
 
   // ─── Socket Setup ───────────────────────────
@@ -1041,9 +1047,25 @@
     }
   }
 
+  function renderJoinQr(code) {
+    if (qrForCode === code || typeof QRCode === 'undefined') return;
+    const box = document.getElementById('lobby-qr');
+    box.innerHTML = '';
+    new QRCode(box, {
+      text: `${location.origin}/?room=${code}`,
+      width: 160, height: 160,
+      colorDark: '#000000', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+    box.style.display = 'inline-block';
+    document.getElementById('lobby-qr-text').style.display = 'block';
+    qrForCode = code;
+  }
+
   function renderLobby(s) {
     showScreen('lobby');
     document.getElementById('lobby-code').textContent = s.roomCode;
+    renderJoinQr(s.roomCode);
 
     const list = document.getElementById('lobby-players');
     list.innerHTML = s.players.map(name => {
@@ -1284,9 +1306,18 @@
     applyStaticTranslations();
   });
 
+  // Deep link: /?room=CODE opens the join form pre-filled
+  const linkedRoom = (new URLSearchParams(location.search).get('room') || '')
+    .toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+
   // Auto-rejoin on fresh page load (browser was closed and reopened)
   const savedCode = sessionStorage.getItem('roomCode');
   const savedName = sessionStorage.getItem('playerName');
+  if (!savedCode && linkedRoom) {
+    showHomeForm('join');
+    document.getElementById('home-code').value = linkedRoom;
+    document.getElementById('home-join-name').focus();
+  }
   if (savedCode && savedName) {
     connectSocket();
     socket.emit('rejoin', { code: savedCode, name: savedName }, (res) => {
