@@ -113,8 +113,10 @@ io.on('connection', (socket) => {
   let currentName = null;
 
   socket.on('create-room', (name, callback) => {
+    const ack = typeof callback === 'function' ? callback : () => {};
+    if (typeof name !== 'string') return ack({ error: 'err_invalidName' });
     const trimmed = name.trim();
-    if (!trimmed || trimmed.length > 20) return callback({ error: 'err_invalidName' });
+    if (!trimmed || trimmed.length > 20) return ack({ error: 'err_invalidName' });
 
     const code = generateCode();
     rooms[code] = {
@@ -137,18 +139,20 @@ io.on('connection', (socket) => {
     currentRoom = code;
     currentName = trimmed;
     socket.join(code);
-    callback({ code });
+    ack({ code });
     broadcastState(code);
   });
 
   socket.on('join-room', (data, callback) => {
-    const code = (data.code || '').toUpperCase().trim();
-    const name = (data.name || '').trim();
+    const ack = typeof callback === 'function' ? callback : () => {};
+    if (!data || typeof data !== 'object') return ack({ error: 'err_invalidNameLength' });
+    const code = (typeof data.code === 'string' ? data.code : '').toUpperCase().trim();
+    const name = (typeof data.name === 'string' ? data.name : '').trim();
 
-    if (!name || name.length > 20) return callback({ error: 'err_invalidNameLength' });
+    if (!name || name.length > 20) return ack({ error: 'err_invalidNameLength' });
 
     const room = rooms[code];
-    if (!room) return callback({ error: 'err_roomNotFound' });
+    if (!room) return ack({ error: 'err_roomNotFound' });
 
     // Check if the name belongs to a disconnected player in grace period
     const existingPlayer = room.players.find(p => p.name.toLowerCase() === name.toLowerCase());
@@ -165,13 +169,13 @@ io.on('connection', (socket) => {
         currentRoom = code;
         currentName = existingPlayer.name;
         socket.join(code);
-        callback({ success: true });
+        ack({ success: true });
         broadcastState(code);
         return;
       }
-      return callback({ error: 'err_nameTaken' });
+      return ack({ error: 'err_nameTaken' });
     }
-    if (room.players.length >= 10) return callback({ error: 'err_roomFull' });
+    if (room.players.length >= 10) return ack({ error: 'err_roomFull' });
     if (room.phase !== 'lobby') {
       room.midRoundJoiners.add(name);
     }
@@ -181,7 +185,7 @@ io.on('connection', (socket) => {
     currentRoom = code;
     currentName = name;
     socket.join(code);
-    callback({ success: true });
+    ack({ success: true });
     broadcastState(code);
   });
 
@@ -203,18 +207,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('submit-song', (data, callback) => {
+    const ack = typeof callback === 'function' ? callback : () => {};
     const room = rooms[currentRoom];
     if (!room || room.phase !== 'submitting') return;
     if (room.midRoundJoiners.has(currentName)) return;
-    if (!data.title?.trim()) return callback?.({ error: 'err_songRequired' });
+    if (!data || typeof data.title !== 'string' || !data.title.trim()) return ack({ error: 'err_songRequired' });
 
     room.submissions[currentName] = {
       title: data.title.trim().slice(0, 100),
-      artist: (data.artist || '').trim().slice(0, 100),
+      artist: (typeof data.artist === 'string' ? data.artist : '').trim().slice(0, 100),
       submittedBy: currentName
     };
 
-    callback?.({ success: true });
+    ack({ success: true });
     broadcastState(currentRoom);
   });
 
@@ -231,6 +236,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('submit-vote', (data, callback) => {
+    const ack = typeof callback === 'function' ? callback : () => {};
     const room = rooms[currentRoom];
     if (!room || room.phase !== 'guessing') return;
     if (room.midRoundJoiners.has(currentName)) return;
@@ -239,14 +245,15 @@ io.on('connection', (socket) => {
     if (currentName === currentSong.submittedBy) return;
 
     // Guess must be an actual player in the room
-    if (!room.players.some(p => p.name === data.guess)) return callback?.({ error: 'err_invalidGuess' });
+    if (!data || !room.players.some(p => p.name === data.guess)) return ack({ error: 'err_invalidGuess' });
 
+    const confNum = Number(data.confidence);
     room.votes[currentName] = {
       guess: data.guess,
-      confidence: Math.min(3, Math.max(1, data.confidence || 1))
+      confidence: Math.min(3, Math.max(1, Number.isNaN(confNum) ? 1 : Math.round(confNum)))
     };
 
-    callback?.({ success: true });
+    ack({ success: true });
 
     const activePlayerCount = room.players.filter(p => !room.midRoundJoiners.has(p.name)).length;
     const eligibleVoters = activePlayerCount - 1;
@@ -288,12 +295,14 @@ io.on('connection', (socket) => {
   });
 
   socket.on('rejoin', (data, callback) => {
-    const code = (data.code || '').toUpperCase().trim();
-    const name = (data.name || '').trim();
-    if (!code || !name) return callback({ error: 'err_invalidName' });
+    const ack = typeof callback === 'function' ? callback : () => {};
+    if (!data || typeof data !== 'object') return ack({ error: 'err_invalidName' });
+    const code = (typeof data.code === 'string' ? data.code : '').toUpperCase().trim();
+    const name = (typeof data.name === 'string' ? data.name : '').trim();
+    if (!code || !name) return ack({ error: 'err_invalidName' });
 
     const room = rooms[code];
-    if (!room) return callback({ error: 'err_roomNotFound' });
+    if (!room) return ack({ error: 'err_roomNotFound' });
 
     // Cancel pending disconnect timer
     const timerKey = `${name}:${code}`;
@@ -314,7 +323,7 @@ io.on('connection', (socket) => {
     currentRoom = code;
     currentName = name;
     socket.join(code);
-    callback({ success: true });
+    ack({ success: true });
     broadcastState(code);
   });
 
