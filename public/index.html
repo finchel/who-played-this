@@ -881,6 +881,7 @@
   let selectedConf = 1;
   let qrForCode = null;
   let lastRoundNumber = 0;
+  let voteKeyRendered = null;
 
   // ─── Socket Setup ───────────────────────────
   function connectSocket() {
@@ -1125,6 +1126,12 @@
 
   function renderGuessing(s) {
     showScreen('guessing');
+    const voteKey = s.roundNumber + ':' + s.currentIndex;
+    if (voteKey !== voteKeyRendered) {
+      voteKeyRendered = voteKey;
+      selectedVote = null;
+      selectedConf = 1;
+    }
     document.getElementById('guess-song-label').textContent =
       t('songLabel') + ' ' + (s.currentIndex + 1) + ' ' + t('ofLabel') + ' ' + s.totalSongs;
     document.getElementById('guess-round-label').textContent = t('roundLabel') + ' ' + s.roundNumber;
