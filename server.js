@@ -315,7 +315,7 @@ io.on('connection', (socket) => {
     }
 
     const player = room.players.find(p => p.name === name);
-    if (!player) return callback({ error: 'err_playerNotInRoom' });
+    if (!player) return ack({ error: 'err_playerNotInRoom' });
 
     // Update socket ID
     player.socketId = socket.id;
