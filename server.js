@@ -16,6 +16,7 @@ const rooms = {};
 const disconnectTimers = {}; // name:roomCode -> timeout
 
 const PROMPT_COUNT = 20;
+const DISCONNECT_GRACE_MS = Number(process.env.DISCONNECT_GRACE_MS) || 60000;
 
 function generateCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -336,12 +337,24 @@ io.on('connection', (socket) => {
     const disconnectedName = currentName;
     const disconnectedRoom = currentRoom;
 
+    // A newer socket has already taken over this player's slot (rejoin landed
+    // before this stale socket's disconnect was detected) — do nothing.
+    const player = room.players.find(p => p.name === currentName);
+    if (player && player.socketId !== socket.id) return;
+
     // Grace period: wait 60 seconds before removing
     const timerKey = `${disconnectedName}:${disconnectedRoom}`;
     disconnectTimers[timerKey] = setTimeout(() => {
       delete disconnectTimers[timerKey];
       const r = rooms[disconnectedRoom];
       if (!r) return;
+
+      // Belt-and-braces: if the player's current socket is live, skip removal
+      const reconnected = r.players.find(p => p.name === disconnectedName);
+      if (reconnected) {
+        const liveSocket = io.sockets.sockets.get(reconnected.socketId);
+        if (liveSocket && liveSocket.connected) return;
+      }
 
       // Remove the disconnected player
       r.players = r.players.filter(p => p.name !== disconnectedName);
@@ -363,7 +376,7 @@ io.on('connection', (socket) => {
       } else {
         broadcastState(disconnectedRoom);
       }
-    }, 60000);
+    }, DISCONNECT_GRACE_MS);
   });
 });
 
