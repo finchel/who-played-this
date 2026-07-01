@@ -192,6 +192,7 @@ io.on('connection', (socket) => {
   socket.on('start-round', () => {
     const room = rooms[currentRoom];
     if (!room || socket.id !== room.hostSocketId) return;
+    if (room.phase !== 'lobby' && room.phase !== 'results') return;
     if (room.players.length < 2) return;
 
     room.roundNumber++;
@@ -226,6 +227,7 @@ io.on('connection', (socket) => {
   socket.on('start-guessing', () => {
     const room = rooms[currentRoom];
     if (!room || socket.id !== room.hostSocketId) return;
+    if (room.phase !== 'submitting') return;
     if (Object.keys(room.submissions).length < 2) return;
 
     room.shuffledSongs = shuffle(Object.values(room.submissions));
@@ -274,6 +276,7 @@ io.on('connection', (socket) => {
   socket.on('next-song', () => {
     const room = rooms[currentRoom];
     if (!room || socket.id !== room.hostSocketId) return;
+    if (room.phase !== 'reveal') return;
 
     room.currentIndex++;
     room.votes = {};
